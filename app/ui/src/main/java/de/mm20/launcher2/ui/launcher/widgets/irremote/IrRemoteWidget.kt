@@ -18,7 +18,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -74,8 +73,6 @@ fun IrRemoteWidget(widget: IrRemoteWidget) {
     }
     val effects = remember(flat) { flat.filter { it.kind == IrKey.Kind.Text } }
 
-    var isOn by remember { mutableStateOf(true) }
-
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -83,33 +80,32 @@ fun IrRemoteWidget(widget: IrRemoteWidget) {
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        // Power + quick controls
+        // Power + quick controls. Stateless: each tap just fires its own code, so a missed
+        // pulse can never leave a toggle showing the wrong state.
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(MaterialTheme.shapes.large)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                    .padding(start = 16.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    stringResource(if (isOn) R.string.ir_remote_on else R.string.ir_remote_off),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
+            if (powerOn != null) {
+                PowerButton(
+                    icon = R.drawable.lightbulb_24px,
+                    label = stringResource(R.string.ir_remote_on),
+                    container = MaterialTheme.colorScheme.primaryContainer,
+                    content = MaterialTheme.colorScheme.onPrimaryContainer,
+                    transmitter = transmitter,
+                    key = powerOn,
+                    modifier = Modifier.weight(1f),
                 )
-                Switch(
-                    checked = isOn,
-                    onCheckedChange = { checked ->
-                        isOn = checked
-                        val key = if (checked) powerOn else powerOff
-                        if (key != null) transmitter.send(key.code)
-                    },
+            }
+            if (powerOff != null) {
+                PowerButton(
+                    icon = R.drawable.power_settings_new_24px,
+                    label = stringResource(R.string.ir_remote_off),
+                    container = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    content = MaterialTheme.colorScheme.onSurfaceVariant,
+                    transmitter = transmitter,
+                    key = powerOff,
+                    modifier = Modifier.weight(1f),
                 )
             }
             if (playPause != null) {
@@ -183,6 +179,51 @@ private fun Modifier.irPress(
             onPressedChange(false)
         }
     )
+}
+
+@Composable
+private fun PowerButton(
+    icon: Int,
+    label: String,
+    container: Color,
+    content: Color,
+    transmitter: IrTransmitter,
+    key: IrKey,
+    modifier: Modifier = Modifier,
+) {
+    val scope = rememberCoroutineScope()
+    val haptic = LocalHapticFeedback.current
+    var pressed by remember { mutableStateOf(false) }
+    val bg by animateColorAsState(if (pressed) content else container, label = "bg")
+    val fg = if (pressed) container else content
+    Row(
+        modifier = modifier
+            .height(52.dp)
+            .clip(MaterialTheme.shapes.large)
+            .background(bg)
+            // Power is a single, deliberate action: send once per tap, no repeat
+            .pointerInput(key) {
+                detectTapGestures(
+                    onPress = {
+                        pressed = true
+                        haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
+                        scope.launch { withContext(Dispatchers.IO) { transmitter.send(key.code) } }
+                        tryAwaitRelease()
+                        pressed = false
+                    }
+                )
+            },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        Icon(painterResource(icon), contentDescription = null, tint = fg)
+        Text(
+            label,
+            style = MaterialTheme.typography.titleSmall,
+            color = fg,
+            modifier = Modifier.padding(start = 8.dp),
+        )
+    }
 }
 
 @Composable
