@@ -156,5 +156,6 @@ dependencies {
     implementation(project(":services:feed"))
     implementation(project(":services:wallpaper"))
     implementation(project(":services:nightscreen"))
+    implementation(project(":services:mindfullaunch"))
     implementation(project(":core:devicepose"))
 }

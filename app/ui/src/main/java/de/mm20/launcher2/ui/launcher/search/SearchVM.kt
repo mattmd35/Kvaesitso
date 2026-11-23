@@ -144,6 +144,7 @@ class SearchVM : ViewModel(), KoinComponent {
     fun launchBestMatchOrAction(context: Context) {
         val bestMatch = bestMatch.value
         if (bestMatch is SavableSearchable) {
+            if (de.mm20.launcher2.ui.mindfullaunch.MindfulLaunchGate.intercept(context, bestMatch)) return
             bestMatch.launch(context, null)
             favoritesService.reportLaunch(bestMatch)
             return

@@ -97,6 +97,8 @@ import de.mm20.launcher2.ui.settings.homescreen.HomescreenSettingsScreen
 import de.mm20.launcher2.ui.settings.wallpaper.WallpaperCarouselSettingsRoute
 import de.mm20.launcher2.ui.settings.nightscreen.NightScreenSettingsRoute
 import de.mm20.launcher2.ui.settings.nightscreen.NightScreenSettingsScreen
+import de.mm20.launcher2.ui.settings.mindfullaunch.MindfulLaunchSettingsRoute
+import de.mm20.launcher2.ui.settings.mindfullaunch.MindfulLaunchSettingsScreen
 import de.mm20.launcher2.ui.settings.wallpaper.WallpaperCarouselSettingsScreen
 import de.mm20.launcher2.ui.settings.icons.IconsSettingsRoute
 import de.mm20.launcher2.ui.settings.icons.IconsSettingsScreen
@@ -195,6 +197,9 @@ class SettingsActivity : BaseActivity() {
             }
             entry<NightScreenSettingsRoute> {
                 NightScreenSettingsScreen()
+            }
+            entry<MindfulLaunchSettingsRoute> {
+                MindfulLaunchSettingsScreen()
             }
             entry<IconsSettingsRoute> {
                 IconsSettingsScreen()

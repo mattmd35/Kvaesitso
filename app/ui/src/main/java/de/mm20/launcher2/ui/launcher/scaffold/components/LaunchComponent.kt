@@ -14,6 +14,7 @@ import androidx.core.app.ActivityOptionsCompat
 import de.mm20.launcher2.search.SavableSearchable
 import de.mm20.launcher2.ui.component.FakeSplashScreen
 import de.mm20.launcher2.ui.ktx.toIntOffset
+import de.mm20.launcher2.ui.mindfullaunch.MindfulLaunchGate
 import de.mm20.launcher2.ui.launcher.scaffold.LauncherScaffoldState
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
@@ -41,6 +42,10 @@ internal class LaunchComponent(
 
     override suspend fun onActivate(state: LauncherScaffoldState) {
         super.onActivate(state)
+        if (MindfulLaunchGate.intercept(activity, searchable)) {
+            state.reset()
+            return
+        }
         val view = activity.window.decorView
         val options = ActivityOptionsCompat.makeClipRevealAnimation(
             view,

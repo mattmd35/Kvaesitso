@@ -180,6 +180,7 @@ dependencies {
     implementation(project(":services:feed"))
     implementation(project(":services:wallpaper"))
     implementation(project(":services:nightscreen"))
+    implementation(project(":services:mindfullaunch"))
 
     // Uncomment this if you want annoying notifications in your debug builds
     //debugImplementation(libs.leakcanary)

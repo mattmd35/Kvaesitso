@@ -1222,4 +1222,25 @@
         <item quantity="one">%1$d wallpaper</item>
         <item quantity="other">%1$d wallpapers</item>
     </plurals>
+    <string name="mindful_launch">Mindful launch</string>
+    <string name="mindful_launch_summary">Pause for a moment before opening attention-grabbing apps</string>
+    <string name="mindful_launch_enabled">Pause before watched apps</string>
+    <string name="mindful_launch_delay">Pause length</string>
+    <string name="mindful_launch_delay_value">%1$d s</string>
+    <string name="mindful_launch_category_apps">Watched apps</string>
+    <string name="mindful_launch_add_app">Add app</string>
+    <string name="mindful_launch_no_apps">No apps yet. Add one here, or long-press an app and pick "Pause before opening".</string>
+    <string name="mindful_launch_app_stats">Today: opened %1$d, skipped %2$d</string>
+    <string name="mindful_launch_breathe">Take a breath</string>
+    <string name="mindful_launch_question">Do you really want to open %1$s right now?</string>
+    <string name="mindful_launch_first_today">First time today</string>
+    <plurals name="mindful_launch_opens_today">
+        <item quantity="one">Already opened once today</item>
+        <item quantity="other">Already opened %1$d times today</item>
+    </plurals>
+    <string name="mindful_launch_skip">Not now</string>
+    <string name="mindful_launch_open">Open %1$s</string>
+    <string name="mindful_launch_wait">Wait %1$d…</string>
+    <string name="menu_mindful_launch_add">Pause before opening</string>
+    <string name="menu_mindful_launch_remove">Stop pausing before opening</string>
 </resources>

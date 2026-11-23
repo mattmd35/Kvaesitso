@@ -52,6 +52,7 @@ import de.mm20.launcher2.ui.component.preferences.PreferenceCategory
 import de.mm20.launcher2.ui.locals.LocalBackStack
 import de.mm20.launcher2.ui.settings.wallpaper.WallpaperCarouselSettingsRoute
 import de.mm20.launcher2.ui.settings.nightscreen.NightScreenSettingsRoute
+import de.mm20.launcher2.ui.settings.mindfullaunch.MindfulLaunchSettingsRoute
 import de.mm20.launcher2.ui.component.preferences.PreferenceScreen
 import de.mm20.launcher2.ui.component.preferences.SliderPreference
 import de.mm20.launcher2.ui.component.preferences.SwitchPreference
@@ -115,6 +116,12 @@ fun HomescreenSettingsScreen() {
                     summary = stringResource(R.string.night_screen_summary),
                     icon = R.drawable.dark_mode_24px,
                     onClick = { backStack.add(NightScreenSettingsRoute) },
+                )
+                Preference(
+                    title = stringResource(R.string.mindful_launch),
+                    summary = stringResource(R.string.mindful_launch_summary),
+                    icon = R.drawable.timer_24px,
+                    onClick = { backStack.add(MindfulLaunchSettingsRoute) },
                 )
             }
         }

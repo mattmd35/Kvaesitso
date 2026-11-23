@@ -104,6 +104,14 @@
         <activity android:name=".launcher.sheets.BindAndConfigureAppWidgetActivity" />
 
         <activity
+            android:name=".mindfullaunch.MindfulLaunchActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:noHistory="true"
+            android:theme="@style/LauncherTheme"
+            android:enableOnBackInvokedCallback="true" />
+
+        <activity
             android:name=".launcher.ImportThemeActivity"
             android:excludeFromRecents="true"
             android:exported="true"

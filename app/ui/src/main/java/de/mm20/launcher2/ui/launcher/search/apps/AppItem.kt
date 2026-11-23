@@ -502,6 +502,22 @@ fun AppItem(
                         }
                     }
 
+                    val mindfulWatched by viewModel.isMindfulLaunchWatched
+                        .collectAsStateWithLifecycle(null)
+                    mindfulWatched?.let { watched ->
+                        toolbarActions.add(
+                            DefaultToolbarAction(
+                                label = stringResource(
+                                    if (watched) R.string.menu_mindful_launch_remove
+                                    else R.string.menu_mindful_launch_add
+                                ),
+                                icon = R.drawable.timer_24px,
+                            ) {
+                                viewModel.setMindfulLaunchWatched(app, !watched)
+                            }
+                        )
+                    }
+
                     val drawerVM: AppDrawerVM = viewModel()
                     val canRearrangeDrawer by drawerVM.canEdit
                     val isRearrangingDrawer by drawerVM.isEditing

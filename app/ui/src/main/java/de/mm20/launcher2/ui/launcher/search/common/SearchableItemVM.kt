@@ -31,6 +31,8 @@ import de.mm20.launcher2.services.favorites.FavoritesService
 import de.mm20.launcher2.services.tags.TagsService
 import de.mm20.launcher2.ui.R
 import de.mm20.launcher2.ui.launcher.search.ListItemViewModel
+import de.mm20.launcher2.mindfullaunch.MindfulLaunch
+import de.mm20.launcher2.ui.mindfullaunch.MindfulLaunchGate
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -59,6 +61,7 @@ class SearchableItemVM : ListItemViewModel(), KoinComponent {
     private val locationSearchSettings: LocationSearchSettings by inject()
     private val contactSearchSettings: ContactSearchSettings by inject()
     private val appLockManager: AppLockManager by inject()
+    private val mindfulLaunch: MindfulLaunch by inject()
 
     val isUpToDate = MutableStateFlow(true)
 
@@ -130,6 +133,7 @@ class SearchableItemVM : ListItemViewModel(), KoinComponent {
 
     fun launch(context: Context, bounds: IntRect? = null): Boolean {
         val searchable = searchable.value ?: return false
+        if (MindfulLaunchGate.intercept(context, searchable)) return true
         val view = (context as? AppCompatActivity)?.window?.decorView
         val options = if (bounds != null && view != null) {
             ActivityOptionsCompat.makeScaleUpAnimation(
@@ -173,6 +177,7 @@ class SearchableItemVM : ListItemViewModel(), KoinComponent {
     }
 
     fun launchChild(context: Context, child: SavableSearchable) {
+        if (MindfulLaunchGate.intercept(context, child)) return
         if (child.launch(context, null)) {
             reportUsage(child)
         }
@@ -268,5 +273,16 @@ class SearchableItemVM : ListItemViewModel(), KoinComponent {
     fun setAppLockState(context: Context, searchable: SavableSearchable, enabled: Boolean) {
         if (searchable !is Application) return
         appLockManager.setAppLockEnabled(context, searchable, enabled)
+    }
+
+    val isMindfulLaunchWatched = searchable.flatMapLatest { s ->
+        val pkg = s?.let { MindfulLaunchGate.packageOf(it) }
+        if (pkg == null || s !is Application) flowOf(null)
+        else mindfulLaunch.data.map { it?.watchedPackages?.contains(pkg) == true }
+    }
+
+    fun setMindfulLaunchWatched(searchable: SavableSearchable, watched: Boolean) {
+        val pkg = MindfulLaunchGate.packageOf(searchable) ?: return
+        mindfulLaunch.setWatched(pkg, watched)
     }
 }
