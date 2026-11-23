@@ -1257,8 +1257,8 @@
     <string name="mindful_launch_spicy">Spicy language</string>
     <string name="mindful_launch_spicy_summary">Swear at me a little. Gentle phrases when off</string>
     <string name="mindful_launch_category_nfc">NFC unlock</string>
-    <string name="mindful_launch_nfc">Require NFC tag to open</string>
-    <string name="mindful_launch_nfc_summary">Watched apps only open after scanning a registered card or tag. Keep it in another room.</string>
+    <string name="mindful_launch_nfc">Scan a card or tag</string>
+    <string name="mindful_launch_nfc_summary">Open by scanning a registered card or tag. Keep it in another room.</string>
     <string name="mindful_launch_nfc_register">Register a tag</string>
     <plurals name="mindful_launch_nfc_registered">
         <item quantity="one">%1$d tag registered</item>
@@ -1302,6 +1302,18 @@
         <item>Nobody in there gives a shit about you. Log off.</item>
         <item>Congrats, you\'ve wasted another chunk of your life.</item>
         <item>Get your shit together and close this.</item>
+        <item>You absolute waste of a charged battery. Close it.</item>
+        <item>Wow. Zero self-control, as usual.</item>
+        <item>Pathetic. You lasted, what, ten minutes?</item>
+        <item>Your dopamine receptors are fried and it\'s your own damn fault.</item>
+        <item>Imagine explaining this screen time to anyone. Embarrassing.</item>
+        <item>You\'re not bored, you\'re just lazy as shit.</item>
+        <item>Another hour flushed down the toilet. Great fucking job.</item>
+        <item>This app owns you. Prove it doesn\'t, you spineless scroll goblin.</item>
+        <item>Seriously, what the fuck is wrong with you? Put it down.</item>
+        <item>Your goals called. They\'re disappointed and so am I.</item>
+        <item>Keep scrolling and stay mediocre. Or don\'t. Your call, dipshit.</item>
+        <item>Nobody\'s impressed by how fast you can thumb through garbage.</item>
     </string-array>
     <string name="wallpaper_carousel_category_look">Look</string>
     <string name="wallpaper_carousel_vignette">Vignette (dark corners)</string>
@@ -1315,4 +1327,15 @@
     <string name="wallpaper_carousel_tone_faded">Faded</string>
     <string name="mindful_launch_nfc_random_id">This card gets a new ID on every tap, so it can\'t be recognized. Try a different card or a sticker tag.</string>
     <string name="mindful_launch_session_notification">Keeping an eye on your screen time</string>
+    <string name="mindful_launch_category_unlock">Unlock</string>
+    <string name="mindful_launch_unlock_math">Solve a math problem</string>
+    <string name="mindful_launch_unlock_math_summary">Something like 37 × 8 + 54. A wrong answer gets a new problem.</string>
+    <string name="mindful_launch_unlock_typing">Type a sentence</string>
+    <string name="mindful_launch_unlock_typing_summary">Type out \"I really want to open …\" before the app opens</string>
+    <string name="mindful_launch_unlock_math_button">Solve a math problem</string>
+    <string name="mindful_launch_unlock_typing_button">Type to confirm</string>
+    <string name="mindful_launch_unlock_math_wrong">Wrong. Here\'s a new one.</string>
+    <string name="mindful_launch_unlock_submit">Check</string>
+    <string name="mindful_launch_unlock_typing_prompt">Type this to open:</string>
+    <string name="mindful_launch_unlock_typing_sentence">I really want to open %1$s right now</string>
 </resources>

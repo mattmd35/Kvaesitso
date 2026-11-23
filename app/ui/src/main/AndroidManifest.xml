@@ -116,8 +116,16 @@
         </service>
 
         <activity
+            android:name=".mindfullaunch.NfcRegisterActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:theme="@style/DialogTheme" />
+
+        <activity
             android:name=".mindfullaunch.MindfulLaunchActivity"
             android:excludeFromRecents="true"
+            android:launchMode="singleTop"
             android:exported="false"
             android:noHistory="true"
             android:theme="@style/LauncherTheme"

@@ -77,6 +77,8 @@ class MindfulLaunchSettingsScreenVM : ViewModel(), KoinComponent {
     fun setInterruptions(enabled: Boolean? = null, minutes: Int? = null) =
         mindfulLaunch.setInterruptions(enabled, minutes)
     fun setSpicy(spicy: Boolean) = mindfulLaunch.setSpicy(spicy)
+    fun setUnlockMath(enabled: Boolean) = mindfulLaunch.setUnlockMath(enabled)
+    fun setUnlockTyping(enabled: Boolean) = mindfulLaunch.setUnlockTyping(enabled)
     fun setNfcUnlock(enabled: Boolean) = mindfulLaunch.setNfcUnlock(enabled)
     fun addNfcTag(id: ByteArray) = mindfulLaunch.addNfcTag(id)
     fun clearNfcTags() = mindfulLaunch.clearNfcTags()
@@ -95,7 +97,6 @@ fun MindfulLaunchSettingsScreen() {
     val viewModel: MindfulLaunchSettingsScreenVM = viewModel()
     val data by viewModel.data.collectAsStateWithLifecycle()
     var showPicker by rememberSaveable { mutableStateOf(false) }
-    var showNfcDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val nfcAdapter = remember { NfcAdapter.getDefaultAdapter(context) }
 
@@ -209,7 +210,21 @@ fun MindfulLaunchSettingsScreen() {
             }
         }
         item {
-            PreferenceCategory(stringResource(R.string.mindful_launch_category_nfc)) {
+            PreferenceCategory(stringResource(R.string.mindful_launch_category_unlock)) {
+                SwitchPreference(
+                    title = stringResource(R.string.mindful_launch_unlock_math),
+                    summary = stringResource(R.string.mindful_launch_unlock_math_summary),
+                    icon = R.drawable.calculate_24px,
+                    value = data.unlockMath,
+                    onValueChanged = { viewModel.setUnlockMath(it) },
+                )
+                SwitchPreference(
+                    title = stringResource(R.string.mindful_launch_unlock_typing),
+                    summary = stringResource(R.string.mindful_launch_unlock_typing_summary),
+                    icon = R.drawable.keyboard_24px,
+                    value = data.unlockTyping,
+                    onValueChanged = { viewModel.setUnlockTyping(it) },
+                )
                 if (nfcAdapter == null) {
                     Preference(
                         title = { Text(stringResource(R.string.mindful_launch_nfc_unavailable)) },
@@ -234,7 +249,9 @@ fun MindfulLaunchSettingsScreen() {
                         ),
                         icon = R.drawable.add_24px,
                         onClick = {
-                            if (nfcAdapter.isEnabled) showNfcDialog = true
+                            if (nfcAdapter.isEnabled) context.startActivity(
+                                Intent(context, de.mm20.launcher2.ui.mindfullaunch.NfcRegisterActivity::class.java)
+                            )
                             else context.startActivity(Intent(Settings.ACTION_NFC_SETTINGS))
                         },
                     )
@@ -248,51 +265,6 @@ fun MindfulLaunchSettingsScreen() {
                 }
             }
         }
-    }
-
-    if (showNfcDialog && nfcAdapter != null) {
-        val activity = LocalActivity.current
-        DisposableEffect(activity) {
-            android.util.Log.i("MindfulNfc", "register dialog: activity=$activity enabled=${nfcAdapter.isEnabled}")
-            activity?.let { act ->
-                nfcAdapter.enableReaderMode(
-                    act,
-                    { tag ->
-                        val id = tag.id
-                        android.util.Log.i(
-                            "MindfulNfc",
-                            "register: id=${id.joinToString("") { "%02x".format(it) }} techs=${tag.techList.joinToString()}"
-                        )
-                        act.runOnUiThread {
-                            // 4-byte IDs starting with 0x08 are random: new on every tap
-                            if (id.size == 4 && id[0] == 0x08.toByte()) {
-                                Toast.makeText(act, R.string.mindful_launch_nfc_random_id, Toast.LENGTH_LONG).show()
-                            } else {
-                                viewModel.addNfcTag(id)
-                                Toast.makeText(act, R.string.mindful_launch_nfc_added, Toast.LENGTH_SHORT).show()
-                                showNfcDialog = false
-                            }
-                        }
-                    },
-                    NfcAdapter.FLAG_READER_NFC_A or NfcAdapter.FLAG_READER_NFC_B or
-                            NfcAdapter.FLAG_READER_NFC_F or NfcAdapter.FLAG_READER_NFC_V or
-                            NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK,
-                    null,
-                )
-            }
-            onDispose { activity?.let { nfcAdapter.disableReaderMode(it) } }
-        }
-        AlertDialog(
-            onDismissRequest = { showNfcDialog = false },
-            title = { Text(stringResource(R.string.mindful_launch_nfc_register)) },
-            text = { Text(stringResource(R.string.mindful_launch_nfc_scan_now)) },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { showNfcDialog = false }) {
-                    Text(stringResource(android.R.string.cancel))
-                }
-            },
-        )
     }
 
     DismissableBottomSheet(

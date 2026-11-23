@@ -47,6 +47,14 @@ data class MindfulLaunchData(
      */
     val nfcUnlock: Boolean = false,
     val nfcTagIds: Set<String> = emptySet(),
+    /**
+     * Unlock by solving a small math problem.
+     */
+    val unlockMath: Boolean = false,
+    /**
+     * Unlock by typing out a sentence.
+     */
+    val unlockTyping: Boolean = false,
 )
 
 class MindfulLaunchStore internal constructor(

@@ -169,7 +169,8 @@ class WallpaperCarousel internal constructor(
             val wm = WallpaperManager.getInstance(context)
             if (data.hasFilters) {
                 val source = BitmapFactory.decodeFile(file.absolutePath) ?: return false
-                val filtered = WallpaperFilters.apply(source, data)
+                val (sw, sh) = screenSize()
+                val filtered = WallpaperFilters.apply(source, data, sw, sh)
                 source.recycle()
                 wm.setBitmap(filtered, null, true, flags)
                 filtered.recycle()
@@ -181,6 +182,22 @@ class WallpaperCarousel internal constructor(
             Log.e("WallpaperCarousel", "Failed to set wallpaper", e)
             false
         }
+    }
+
+    /**
+     * Full physical screen size in the current orientation (portrait for phones).
+     */
+    private fun screenSize(): Pair<Int, Int> {
+        val wm = context.getSystemService(android.view.WindowManager::class.java)
+        val (w, h) = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && wm != null) {
+            val b = wm.maximumWindowMetrics.bounds
+            b.width() to b.height()
+        } else {
+            val m = context.resources.displayMetrics
+            m.widthPixels to m.heightPixels
+        }
+        // Wallpapers are portrait on phones; keep the long side vertical
+        return min(w, h) to max(w, h)
     }
 
     private suspend fun update(block: (WallpaperCarouselData) -> WallpaperCarouselData): WallpaperCarouselData {

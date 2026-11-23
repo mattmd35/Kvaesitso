@@ -30,6 +30,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.TextButton
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -77,7 +81,7 @@ internal enum class NfcGate {
 
 /**
  * The pause before a watched app opens. After a short breathing countdown the app can be opened,
- * or, with NFC unlock, only after scanning a registered tag. "Not now" (or back) returns home.
+ * or through the enabled unlock challenges (NFC tag, math problem, typing a sentence). "Not now" (or back) returns home.
  */
 class MindfulLaunchActivity : BaseActivity() {
     private val mindfulLaunch: MindfulLaunch by inject()
@@ -122,6 +126,8 @@ class MindfulLaunchActivity : BaseActivity() {
                         timeToday = timeToday,
                         delaySeconds = delaySeconds,
                         nfcGate = nfcGate,
+                        unlockMath = data?.unlockMath == true,
+                        unlockTyping = data?.unlockTyping == true,
                         icon = { ShapedLauncherIcon(size = iconSize, icon = { icon }) },
                         onOpen = { open() },
                         onSkip = { skip() },
@@ -148,30 +154,21 @@ class MindfulLaunchActivity : BaseActivity() {
             "MindfulNfc",
             "pause screen: gate=$nfcGate requires=${mindfulLaunch.requiresNfc()} tags=${mindfulLaunch.data.value?.nfcTagIds?.size}"
         )
-        if (nfcGate == NfcGate.Ready) {
-            adapter?.enableReaderMode(
-                this,
-                { tag ->
-                    val known = mindfulLaunch.isKnownTag(tag.id)
-                    android.util.Log.i(
-                        "MindfulNfc",
-                        "unlock: id=${tag.id.joinToString("") { "%02x".format(it) }} known=$known"
-                    )
-                    runOnUiThread {
-                        if (known) open() else nfcGate = NfcGate.WrongTag
-                    }
-                },
-                NfcAdapter.FLAG_READER_NFC_A or NfcAdapter.FLAG_READER_NFC_B or
-                        NfcAdapter.FLAG_READER_NFC_F or NfcAdapter.FLAG_READER_NFC_V or
-                        NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK,
-                null,
-            )
-        }
+        if (nfcGate == NfcGate.Ready) NfcScan.enable(this)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        val id = NfcScan.tagId(intent) ?: return
+        if (nfcGate == NfcGate.None) return
+        val known = mindfulLaunch.isKnownTag(id)
+        android.util.Log.i("MindfulNfc", "unlock: id=${NfcScan.hex(id)} known=$known")
+        if (known) open() else nfcGate = NfcGate.WrongTag
     }
 
     override fun onPause() {
         super.onPause()
-        NfcAdapter.getDefaultAdapter(this)?.disableReaderMode(this)
+        NfcScan.disable(this)
     }
 
     private fun open() {
@@ -212,12 +209,15 @@ private fun PauseScreen(
     timeToday: Long?,
     delaySeconds: Int,
     nfcGate: NfcGate,
+    unlockMath: Boolean,
+    unlockTyping: Boolean,
     icon: @Composable () -> Unit,
     onOpen: () -> Unit,
     onSkip: () -> Unit,
     onEnableNfc: () -> Unit,
     onWrongTagShown: () -> Unit,
 ) {
+    var challenge by remember { mutableStateOf<Challenge?>(null) }
     val progress = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
         progress.animateTo(
@@ -250,10 +250,12 @@ private fun PauseScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surfaceContainerLowest)
             .safeDrawingPadding()
+            .imePadding()
             .padding(24.dp),
         contentAlignment = Alignment.Center,
     ) {
         Column(
+            modifier = Modifier.verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
@@ -311,8 +313,9 @@ private fun PauseScreen(
                 Text(stringResource(R.string.mindful_launch_skip))
             }
             Spacer(Modifier.height(8.dp))
-            when (nfcGate) {
-                NfcGate.None -> OutlinedButton(
+            val anyChallenge = unlockMath || unlockTyping || nfcGate != NfcGate.None
+            if (!anyChallenge) {
+                OutlinedButton(
                     onClick = onOpen,
                     enabled = done,
                     modifier = Modifier.fillMaxWidth(0.7f),
@@ -328,11 +331,43 @@ private fun PauseScreen(
                         )
                     }
                 }
-
-                NfcGate.Off -> OutlinedButton(
-                    onClick = onEnableNfc,
-                    modifier = Modifier.fillMaxWidth(0.7f),
-                ) {
+            }
+            // Math / typing become available after the countdown; the card works any time.
+            if (unlockMath || unlockTyping) {
+                when (challenge) {
+                    Challenge.Math -> MathChallenge(onSolved = onOpen)
+                    Challenge.Typing -> TypingChallenge(label = label, onDone = onOpen)
+                    null -> {
+                        if (unlockMath) {
+                            OutlinedButton(
+                                onClick = { challenge = Challenge.Math },
+                                enabled = done,
+                                modifier = Modifier.fillMaxWidth(0.7f),
+                            ) {
+                                Text(
+                                    if (done) stringResource(R.string.mindful_launch_unlock_math_button)
+                                    else stringResource(R.string.mindful_launch_wait, remaining)
+                                )
+                            }
+                        }
+                        if (unlockTyping) {
+                            OutlinedButton(
+                                onClick = { challenge = Challenge.Typing },
+                                enabled = done,
+                                modifier = Modifier.fillMaxWidth(0.7f),
+                            ) {
+                                Text(
+                                    if (done) stringResource(R.string.mindful_launch_unlock_typing_button)
+                                    else stringResource(R.string.mindful_launch_wait, remaining)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            when (nfcGate) {
+                NfcGate.None -> {}
+                NfcGate.Off -> TextButton(onClick = onEnableNfc) {
                     Text(stringResource(R.string.mindful_launch_nfc_turn_on))
                 }
 
@@ -349,3 +384,5 @@ private fun PauseScreen(
         }
     }
 }
+
+internal enum class Challenge { Math, Typing }

@@ -105,6 +105,14 @@ class MindfulLaunch internal constructor(
         scope.launch { store.update { it.copy(nfcUnlock = enabled) } }
     }
 
+    fun setUnlockMath(enabled: Boolean) {
+        scope.launch { store.update { it.copy(unlockMath = enabled) } }
+    }
+
+    fun setUnlockTyping(enabled: Boolean) {
+        scope.launch { store.update { it.copy(unlockTyping = enabled) } }
+    }
+
     fun addNfcTag(id: ByteArray) {
         val hex = id.toHex()
         scope.launch { store.update { it.copy(nfcTagIds = it.nfcTagIds + hex) } }
