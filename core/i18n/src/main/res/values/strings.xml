@@ -1145,11 +1145,35 @@
     <string name="app_drawer_folder_arrange_hint">Drag to reorder. Tap ✕ to move an app out of the folder.</string>
     <string name="preference_favorites_in_drawer">Show in app drawer</string>
     <string name="preference_favorites_in_drawer_summary">Show favorites and tags above the app list. Edit them from the ⋮ menu in the search bar.</string>
+    <!-- Night screen -->
+    <string name="night_screen">Night screen</string>
+    <string name="night_screen_summary">Dim the screen and filter blue light, on a schedule or manually</string>
+    <string name="night_screen_on">Night screen</string>
+    <string name="night_screen_permission">Permission required</string>
+    <string name="night_screen_permission_summary">Allow Kvaesitso to display over other apps so it can dim the whole screen</string>
+    <string name="night_screen_category_look">Look</string>
+    <string name="night_screen_dim">Dimming</string>
+    <string name="night_screen_warmth">Warmth (blue light filter)</string>
+    <string name="night_screen_category_schedule">Schedule</string>
+    <string name="night_screen_schedule">Turn on automatically</string>
+    <string name="night_screen_schedule_summary">Switching manually lasts until the next scheduled change</string>
+    <string name="night_screen_start">From</string>
+    <string name="night_screen_end">Until</string>
+    <string name="night_screen_add_tile">Add to quick settings</string>
+    <string name="night_screen_add_tile_summary">Toggle night screen from the notification shade</string>
+    <string name="night_screen_note">Android limits how dark overlays from apps can get, and the status bar and notification shade are always drawn above them. Combine with low system brightness for the darkest screen.</string>
+    <string name="night_screen_turn_on">Turn on night screen</string>
+    <string name="night_screen_turn_off">Turn off night screen</string>
     <!-- Wallpaper carousel -->
     <string name="preference_screen_wallpaper_carousel">Wallpaper carousel</string>
     <string name="preference_screen_wallpaper_carousel_summary">Switch between your own wallpapers automatically</string>
     <string name="wallpaper_carousel_enable">Change wallpaper automatically</string>
     <string name="wallpaper_carousel_interval">Change every</string>
+    <string name="wallpaper_carousel_schedule">When to change</string>
+    <string name="wallpaper_carousel_schedule_interval">Repeatedly, at an interval</string>
+    <string name="wallpaper_carousel_schedule_times">At set times of day</string>
+    <string name="wallpaper_carousel_times">Times</string>
+    <string name="wallpaper_carousel_add_time">Add time</string>
     <string name="wallpaper_carousel_interval_15m">15 minutes</string>
     <string name="wallpaper_carousel_interval_30m">30 minutes</string>
     <string name="wallpaper_carousel_interval_1h">Hour</string>

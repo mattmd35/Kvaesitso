@@ -95,6 +95,8 @@ import de.mm20.launcher2.ui.settings.hiddenitems.HiddenItemsSettingsScreen
 import de.mm20.launcher2.ui.settings.homescreen.HomescreenSettingsRoute
 import de.mm20.launcher2.ui.settings.homescreen.HomescreenSettingsScreen
 import de.mm20.launcher2.ui.settings.wallpaper.WallpaperCarouselSettingsRoute
+import de.mm20.launcher2.ui.settings.nightscreen.NightScreenSettingsRoute
+import de.mm20.launcher2.ui.settings.nightscreen.NightScreenSettingsScreen
 import de.mm20.launcher2.ui.settings.wallpaper.WallpaperCarouselSettingsScreen
 import de.mm20.launcher2.ui.settings.icons.IconsSettingsRoute
 import de.mm20.launcher2.ui.settings.icons.IconsSettingsScreen
@@ -190,6 +192,9 @@ class SettingsActivity : BaseActivity() {
             }
             entry<WallpaperCarouselSettingsRoute> {
                 WallpaperCarouselSettingsScreen()
+            }
+            entry<NightScreenSettingsRoute> {
+                NightScreenSettingsScreen()
             }
             entry<IconsSettingsRoute> {
                 IconsSettingsScreen()
@@ -432,6 +437,7 @@ class SettingsActivity : BaseActivity() {
             ROUTE_MEDIA_INTEGRATION -> MediaIntegrationSettingsRoute
             ROUTE_SEARCH_ACTIONS -> SearchActionsSettingsRoute
             ROUTE_HIDDEN_ITEMS -> HiddenItemsSettingsRoute
+            ROUTE_NIGHT_SCREEN -> NightScreenSettingsRoute
             ROUTE_CRASH_REPORT if (intent.hasExtra(EXTRA_CRASH_REPORT_PATH)) -> {
                 CrashReportRoute(intent.getStringExtra(EXTRA_CRASH_REPORT_PATH)!!)
             }
@@ -445,6 +451,7 @@ class SettingsActivity : BaseActivity() {
         const val ROUTE_MEDIA_INTEGRATION = "settings/integrations/media"
         const val ROUTE_SEARCH_ACTIONS = "settings/search/searchactions"
         const val ROUTE_HIDDEN_ITEMS = "settings/search/hiddenitems"
+        const val ROUTE_NIGHT_SCREEN = "settings/homescreen/nightscreen"
         const val ROUTE_CRASH_REPORT = "settings/debug/crashreport"
         const val EXTRA_CRASH_REPORT_PATH = "crash_report_path"
     }

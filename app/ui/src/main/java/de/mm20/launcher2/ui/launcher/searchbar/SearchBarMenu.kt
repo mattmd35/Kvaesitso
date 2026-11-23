@@ -32,6 +32,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.rememberCoroutineScope
+import de.mm20.launcher2.nightscreen.NightScreen
+import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 import de.mm20.launcher2.ui.launcher.search.apps.drawer.AppDrawerVM
 import de.mm20.launcher2.ui.launcher.sheets.LocalBottomSheetManager
 import de.mm20.launcher2.ui.R
@@ -122,6 +127,38 @@ fun RowScope.SearchBarMenu(
                         }
                     )
                 }
+                val nightScreen: NightScreen = koinInject()
+                val nightScreenActive by nightScreen.isActive.collectAsState()
+                val menuScope = rememberCoroutineScope()
+                DropdownMenuItem(
+                    shape = MenuDefaults.middleItemShape,
+                    onClick = {
+                        if (!nightScreen.canDrawOverlays()) {
+                            context.startActivity(
+                                Intent(context, SettingsActivity::class.java)
+                                    .putExtra(SettingsActivity.EXTRA_ROUTE, SettingsActivity.ROUTE_NIGHT_SCREEN)
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                            )
+                        } else {
+                            menuScope.launch { nightScreen.toggle() }
+                        }
+                        showOverflowMenu = false
+                    },
+                    text = {
+                        Text(
+                            stringResource(
+                                if (nightScreenActive) R.string.night_screen_turn_off
+                                else R.string.night_screen_turn_on
+                            )
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            painterResource(if (nightScreenActive) R.drawable.dark_mode_24px_filled else R.drawable.dark_mode_24px),
+                            contentDescription = null
+                        )
+                    }
+                )
                 DropdownMenuItem(
                     shape = MenuDefaults.middleItemShape,
                     onClick = {

@@ -10,6 +10,8 @@ import android.os.Build
 import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
@@ -22,6 +24,7 @@ import kotlinx.coroutines.withContext
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import java.io.File
+import java.util.Calendar
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlin.math.max
@@ -75,6 +78,18 @@ class WallpaperCarousel internal constructor(
 
     suspend fun setInterval(minutes: Int) {
         update { it.copy(intervalMinutes = minutes.coerceAtLeast(MinIntervalMinutes)) }
+    }
+
+    suspend fun setSchedule(schedule: WallpaperSchedule) {
+        update { it.copy(schedule = schedule) }
+    }
+
+    suspend fun addTime(minuteOfDay: Int) {
+        update { it.copy(times = (it.times + minuteOfDay).distinct().sorted()) }
+    }
+
+    suspend fun removeTime(minuteOfDay: Int) {
+        update { it.copy(times = it.times - minuteOfDay) }
     }
 
     suspend fun setTarget(target: WallpaperTarget) {
@@ -211,13 +226,39 @@ class WallpaperCarousel internal constructor(
 
 internal object WallpaperCarouselScheduler {
     private const val WorkName = "wallpaper_carousel"
+    private const val TimedWorkName = "wallpaper_carousel_timed"
 
-    fun update(context: Context, data: WallpaperCarouselData) {
+    /**
+     * @param fromWorker true when called by the worker itself, to queue the next run after the
+     * current one instead of replacing (cancelling) it.
+     */
+    fun update(context: Context, data: WallpaperCarouselData, fromWorker: Boolean = false) {
         val workManager = WorkManager.getInstance(context)
         if (!data.enabled || data.wallpapers.size < 2) {
             workManager.cancelUniqueWork(WorkName)
+            workManager.cancelUniqueWork(TimedWorkName)
             return
         }
+        if (data.schedule == WallpaperSchedule.Times) {
+            workManager.cancelUniqueWork(WorkName)
+            if (data.times.isEmpty()) {
+                workManager.cancelUniqueWork(TimedWorkName)
+                return
+            }
+            val now = System.currentTimeMillis()
+            val next = data.times.minOf { nextOccurrence(now, it) }
+            val request = OneTimeWorkRequestBuilder<WallpaperCarouselWorker>()
+                .setInitialDelay(next - now, TimeUnit.MILLISECONDS)
+                .build()
+            workManager.enqueueUniqueWork(
+                TimedWorkName,
+                if (fromWorker) ExistingWorkPolicy.APPEND_OR_REPLACE else ExistingWorkPolicy.REPLACE,
+                request,
+            )
+            return
+        }
+        workManager.cancelUniqueWork(TimedWorkName)
+        if (fromWorker) return
         val interval = data.intervalMinutes.coerceAtLeast(WallpaperCarousel.MinIntervalMinutes).toLong()
         val request = PeriodicWorkRequestBuilder<WallpaperCarouselWorker>(interval, TimeUnit.MINUTES)
             .setInitialDelay(interval, TimeUnit.MINUTES)
@@ -230,8 +271,27 @@ class WallpaperCarouselWorker(context: Context, params: WorkerParameters) :
     CoroutineWorker(context, params), KoinComponent {
     private val carousel: WallpaperCarousel by inject()
 
+    private val store: WallpaperCarouselStore by inject()
+
     override suspend fun doWork(): Result {
         carousel.next()
+        // Time based schedules use one-time work, queue the next one
+        val data = store.data.first()
+        if (data.schedule == WallpaperSchedule.Times) {
+            WallpaperCarouselScheduler.update(applicationContext, data, fromWorker = true)
+        }
         return Result.success()
     }
+}
+
+private fun nextOccurrence(time: Long, minuteOfDay: Int): Long {
+    val cal = Calendar.getInstance().apply {
+        timeInMillis = time
+        set(Calendar.HOUR_OF_DAY, minuteOfDay / 60)
+        set(Calendar.MINUTE, minuteOfDay % 60)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }
+    if (cal.timeInMillis <= time + 30_000) cal.add(Calendar.DAY_OF_YEAR, 1)
+    return cal.timeInMillis
 }

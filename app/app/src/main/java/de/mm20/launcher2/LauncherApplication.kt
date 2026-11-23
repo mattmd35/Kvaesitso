@@ -11,6 +11,9 @@ import de.mm20.launcher2.applock.appLockModule
 import de.mm20.launcher2.backup.backupModule
 import de.mm20.launcher2.badges.badgesModule
 import de.mm20.launcher2.wallpaper.wallpaperModule
+import de.mm20.launcher2.nightscreen.NightScreen
+import de.mm20.launcher2.nightscreen.nightScreenModule
+import org.koin.core.context.GlobalContext
 import de.mm20.launcher2.calculator.calculatorModule
 import de.mm20.launcher2.calendar.calendarModule
 import de.mm20.launcher2.contacts.contactsModule
@@ -104,9 +107,13 @@ class LauncherApplication : Application(), CoroutineScope, ImageLoaderFactory {
                     i18nDataModule,
                     feedModule,
                     wallpaperModule,
+                    nightScreenModule,
                 )
             )
         }
+
+        // Night screen overlay lives in the launcher process
+        GlobalContext.get().get<NightScreen>().start()
     }
 
     override fun newImageLoader(): ImageLoader {

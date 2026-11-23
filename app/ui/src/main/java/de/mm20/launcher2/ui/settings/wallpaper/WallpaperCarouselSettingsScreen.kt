@@ -1,6 +1,19 @@
 package de.mm20.launcher2.ui.settings.wallpaper
 
+import android.app.TimePickerDialog
+import android.text.format.DateFormat
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.InputChip
+import androidx.compose.material3.InputChipDefaults
+import androidx.compose.ui.platform.LocalContext
+import de.mm20.launcher2.wallpaper.WallpaperSchedule
+import java.util.Calendar
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -76,19 +89,37 @@ fun WallpaperCarouselSettingsScreen() {
         item {
             PreferenceCategory {
                 ListPreference(
-                    title = stringResource(R.string.wallpaper_carousel_interval),
+                    title = stringResource(R.string.wallpaper_carousel_schedule),
                     items = listOf(
-                        stringResource(R.string.wallpaper_carousel_interval_15m) to 15,
-                        stringResource(R.string.wallpaper_carousel_interval_30m) to 30,
-                        stringResource(R.string.wallpaper_carousel_interval_1h) to 60,
-                        stringResource(R.string.wallpaper_carousel_interval_3h) to 180,
-                        stringResource(R.string.wallpaper_carousel_interval_6h) to 360,
-                        stringResource(R.string.wallpaper_carousel_interval_12h) to 720,
-                        stringResource(R.string.wallpaper_carousel_interval_1d) to 1440,
+                        stringResource(R.string.wallpaper_carousel_schedule_interval) to WallpaperSchedule.Interval,
+                        stringResource(R.string.wallpaper_carousel_schedule_times) to WallpaperSchedule.Times,
                     ),
-                    value = data.intervalMinutes,
-                    onValueChanged = { viewModel.setInterval(it) },
+                    value = data.schedule,
+                    onValueChanged = { viewModel.setSchedule(it) },
                 )
+                AnimatedVisibility(data.schedule == WallpaperSchedule.Interval) {
+                    ListPreference(
+                        title = stringResource(R.string.wallpaper_carousel_interval),
+                        items = listOf(
+                            stringResource(R.string.wallpaper_carousel_interval_15m) to 15,
+                            stringResource(R.string.wallpaper_carousel_interval_30m) to 30,
+                            stringResource(R.string.wallpaper_carousel_interval_1h) to 60,
+                            stringResource(R.string.wallpaper_carousel_interval_3h) to 180,
+                            stringResource(R.string.wallpaper_carousel_interval_6h) to 360,
+                            stringResource(R.string.wallpaper_carousel_interval_12h) to 720,
+                            stringResource(R.string.wallpaper_carousel_interval_1d) to 1440,
+                        ),
+                        value = data.intervalMinutes,
+                        onValueChanged = { viewModel.setInterval(it) },
+                    )
+                }
+                AnimatedVisibility(data.schedule == WallpaperSchedule.Times) {
+                    ScheduleTimes(
+                        times = data.times,
+                        onAdd = { viewModel.addTime(it) },
+                        onRemove = { viewModel.removeTime(it) },
+                    )
+                }
                 ListPreference(
                     title = stringResource(R.string.wallpaper_carousel_target),
                     items = listOf(
@@ -241,4 +272,70 @@ private fun WallpaperThumbnail(
             )
         }
     }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ScheduleTimes(
+    times: List<Int>,
+    onAdd: (Int) -> Unit,
+    onRemove: (Int) -> Unit,
+) {
+    val context = LocalContext.current
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceBright)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        Text(
+            stringResource(R.string.wallpaper_carousel_times),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(top = 8.dp),
+        ) {
+            for (minute in times) {
+                InputChip(
+                    selected = false,
+                    onClick = { onRemove(minute) },
+                    label = { Text(formatMinute(context, minute)) },
+                    trailingIcon = {
+                        Icon(
+                            painterResource(R.drawable.close_20px),
+                            contentDescription = stringResource(R.string.wallpaper_carousel_remove),
+                            modifier = Modifier.size(InputChipDefaults.IconSize),
+                        )
+                    },
+                )
+            }
+            AssistChip(
+                onClick = {
+                    TimePickerDialog(
+                        context,
+                        { _, h, m -> onAdd(h * 60 + m) },
+                        12, 0,
+                        DateFormat.is24HourFormat(context),
+                    ).show()
+                },
+                label = { Text(stringResource(R.string.wallpaper_carousel_add_time)) },
+                leadingIcon = {
+                    Icon(
+                        painterResource(R.drawable.add_24px),
+                        contentDescription = null,
+                        modifier = Modifier.size(AssistChipDefaults.IconSize),
+                    )
+                },
+            )
+        }
+    }
+}
+
+private fun formatMinute(context: android.content.Context, minute: Int): String {
+    val cal = Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, minute / 60)
+        set(Calendar.MINUTE, minute % 60)
+    }
+    return DateFormat.getTimeFormat(context).format(cal.time)
 }

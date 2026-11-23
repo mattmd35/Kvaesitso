@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import de.mm20.launcher2.wallpaper.WallpaperCarousel
 import de.mm20.launcher2.wallpaper.WallpaperCarouselData
+import de.mm20.launcher2.wallpaper.WallpaperSchedule
 import de.mm20.launcher2.wallpaper.WallpaperTarget
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
@@ -40,6 +41,9 @@ class WallpaperCarouselSettingsScreenVM : ViewModel(), KoinComponent {
     fun next() = viewModelScope.launch { carousel.next() }
     fun setEnabled(enabled: Boolean) = viewModelScope.launch { carousel.setEnabled(enabled) }
     fun setInterval(minutes: Int) = viewModelScope.launch { carousel.setInterval(minutes) }
+    fun setSchedule(schedule: WallpaperSchedule) = viewModelScope.launch { carousel.setSchedule(schedule) }
+    fun addTime(minute: Int) = viewModelScope.launch { carousel.addTime(minute) }
+    fun removeTime(minute: Int) = viewModelScope.launch { carousel.removeTime(minute) }
     fun setTarget(target: WallpaperTarget) = viewModelScope.launch { carousel.setTarget(target) }
     fun setShuffle(shuffle: Boolean) = viewModelScope.launch { carousel.setShuffle(shuffle) }
     fun setIncludeInBackup(include: Boolean) = viewModelScope.launch { carousel.setIncludeInBackup(include) }

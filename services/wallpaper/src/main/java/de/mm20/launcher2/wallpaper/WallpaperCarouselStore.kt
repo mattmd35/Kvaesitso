@@ -27,9 +27,27 @@ enum class WallpaperTarget {
 }
 
 @Serializable
+enum class WallpaperSchedule {
+    /**
+     * Change every [WallpaperCarouselData.intervalMinutes].
+     */
+    Interval,
+
+    /**
+     * Change at the times of day in [WallpaperCarouselData.times].
+     */
+    Times,
+}
+
+@Serializable
 data class WallpaperCarouselData(
     val enabled: Boolean = false,
+    val schedule: WallpaperSchedule = WallpaperSchedule.Interval,
     val intervalMinutes: Int = 60,
+    /**
+     * Minutes after midnight, sorted.
+     */
+    val times: List<Int> = listOf(7 * 60, 20 * 60),
     val target: WallpaperTarget = WallpaperTarget.HomeAndLock,
     val shuffle: Boolean = false,
     /**
