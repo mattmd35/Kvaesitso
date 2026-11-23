@@ -11,12 +11,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import de.mm20.launcher2.search.SavableSearchable
 import de.mm20.launcher2.ui.ktx.withCorners
 import de.mm20.launcher2.ui.theme.transparency.transparency
 import kotlin.math.ceil
 
-fun <T : SavableSearchable> LazyListScope.GridResults(
+fun <T> LazyListScope.GridResults(
     key: String,
     items: List<T>,
     itemContent: @Composable (T) -> Unit,

@@ -1131,4 +1131,16 @@
     <string name="typo_preview_medium2">Preview</string>
     <string name="typo_preview_long">The quick brown fox\njumps over 1234790</string>
     <string name="preference_category_donate">Support the development</string>
+    <!-- App drawer: custom order and folders -->
+    <string name="app_drawer_rearrange">Rearrange apps</string>
+    <string name="app_drawer_rearrange_hint">Drag apps to move them. Drop an app onto another app to create a folder.</string>
+    <string name="app_drawer_reset">Reset</string>
+    <string name="app_drawer_reset_title">Reset app drawer?</string>
+    <string name="app_drawer_reset_message">All folders will be removed and apps will be sorted alphabetically again.</string>
+    <string name="app_drawer_folder_default_name">Folder</string>
+    <string name="app_drawer_folder_name">Folder name</string>
+    <string name="app_drawer_folder_rename">Rename folder</string>
+    <string name="app_drawer_folder_ungroup">Ungroup</string>
+    <string name="app_drawer_folder_remove_app">Remove from folder</string>
+    <string name="app_drawer_folder_arrange_hint">Drag to reorder. Tap ✕ to move an app out of the folder.</string>
 </resources>

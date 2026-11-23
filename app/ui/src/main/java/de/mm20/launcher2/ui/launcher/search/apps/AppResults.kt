@@ -3,10 +3,13 @@ package de.mm20.launcher2.ui.launcher.search.apps
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.AlertDialog
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -17,18 +20,28 @@ import androidx.compose.material3.LeadingIconTab
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import de.mm20.launcher2.profiles.Profile
 import de.mm20.launcher2.search.Application
 import de.mm20.launcher2.ui.R
+import de.mm20.launcher2.ui.launcher.search.apps.drawer.DrawerDragState
+import de.mm20.launcher2.ui.launcher.search.apps.drawer.DrawerFolderTile
+import de.mm20.launcher2.ui.launcher.search.apps.drawer.DrawerItem
+import de.mm20.launcher2.ui.launcher.search.apps.drawer.drawerDragTile
+import de.mm20.launcher2.ui.launcher.search.apps.drawer.wiggle
 import de.mm20.launcher2.ui.launcher.search.common.grid.GridItem
 import de.mm20.launcher2.ui.launcher.search.common.grid.GridResults
 import de.mm20.launcher2.ui.launcher.search.common.list.ListItem
@@ -50,6 +63,16 @@ fun LazyListScope.AppResults(
     columns: Int,
     reverse: Boolean,
     showList: Boolean,
+    /**
+     * Apps arranged according to the custom drawer layout (including folders). If null, [apps]
+     * are shown as they are. Only used in grid mode.
+     */
+    drawerItems: List<DrawerItem>? = null,
+    isRearranging: Boolean = false,
+    dragState: DrawerDragState? = null,
+    onOpenFolder: (folderId: String) -> Unit = {},
+    onStopRearranging: () -> Unit = {},
+    onResetLayout: () -> Unit = {},
 ) {
 
     val profileIndex by derivedStateOf {
@@ -63,7 +86,7 @@ fun LazyListScope.AppResults(
         profileStates[selectedProfileType]?.locked == true
     }
 
-    val before = if (profiles.size > 1) {
+    val profileHeader = if (profiles.size > 1) {
          @Composable {
             Column(
                 verticalArrangement = if (reverse) Arrangement.BottomReversed else Arrangement.Top,
@@ -209,6 +232,21 @@ fun LazyListScope.AppResults(
             }
         }
     } else null
+
+    val before: (@Composable () -> Unit)? = if (isRearranging && drawerItems != null && !showList) {
+        @Composable {
+            Column(
+                verticalArrangement = if (reverse) Arrangement.BottomReversed else Arrangement.Top,
+            ) {
+                profileHeader?.invoke()
+                RearrangeHeader(
+                    onDone = onStopRearranging,
+                    onReset = onResetLayout,
+                )
+            }
+        }
+    } else profileHeader
+
     if (showList) {
         ListResults(
             key = "apps",
@@ -227,6 +265,23 @@ fun LazyListScope.AppResults(
             },
             reverse = reverse,
         )
+    } else if (drawerItems != null) {
+        GridResults(
+            key = "apps",
+            items = if (isProfileLocked) emptyList() else drawerItems,
+            before = before,
+            itemContent = { item ->
+                DrawerTile(
+                    item = item,
+                    isRearranging = isRearranging,
+                    dragState = dragState,
+                    highlight = item is DrawerItem.App && item.app.key == highlightedItem?.key,
+                    onOpenFolder = onOpenFolder,
+                )
+            },
+            reverse = reverse,
+            columns = columns,
+        )
     } else {
         GridResults(
             key = "apps",
@@ -244,4 +299,97 @@ fun LazyListScope.AppResults(
         )
     }
 
+}
+
+@Composable
+private fun DrawerTile(
+    item: DrawerItem,
+    isRearranging: Boolean,
+    dragState: DrawerDragState?,
+    highlight: Boolean,
+    onOpenFolder: (folderId: String) -> Unit,
+) {
+    val isDragged = dragState?.draggedKey == item.key
+    val isMergeTarget = dragState?.mergeTargetKey == item.key
+    Box(
+        modifier = Modifier
+            .drawerDragTile(dragState, item.key)
+            // The dragged tile is drawn as a floating copy, keep its slot empty
+            .graphicsLayer { alpha = if (isDragged) 0f else 1f }
+            .wiggle(isRearranging && !isDragged, item.key)
+    ) {
+        if (isMergeTarget) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .padding(2.dp)
+                    .background(
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                        MaterialTheme.shapes.medium,
+                    )
+            )
+        }
+        when (item) {
+            is DrawerItem.App -> GridItem(
+                item = item.app,
+                showLabels = LocalGridSettings.current.showLabels,
+                highlight = highlight,
+                enabled = !isRearranging,
+            )
+
+            is DrawerItem.Folder -> DrawerFolderTile(
+                folder = item,
+                onClick = { onOpenFolder(item.folder.id) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun RearrangeHeader(
+    onDone: () -> Unit,
+    onReset: () -> Unit,
+) {
+    var showResetDialog by remember { mutableStateOf(false) }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            stringResource(R.string.app_drawer_rearrange_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .weight(1f)
+                .padding(end = 8.dp),
+        )
+        TextButton(onClick = { showResetDialog = true }) {
+            Text(stringResource(R.string.app_drawer_reset))
+        }
+        FilledTonalButton(onClick = onDone) {
+            Text(stringResource(R.string.action_done))
+        }
+    }
+    if (showResetDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetDialog = false },
+            title = { Text(stringResource(R.string.app_drawer_reset_title)) },
+            text = { Text(stringResource(R.string.app_drawer_reset_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showResetDialog = false
+                    onReset()
+                }) {
+                    Text(stringResource(R.string.app_drawer_reset))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetDialog = false }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+            },
+        )
+    }
 }

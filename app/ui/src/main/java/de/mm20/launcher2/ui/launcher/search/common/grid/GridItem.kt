@@ -88,7 +88,11 @@ fun GridItem(
     item: SavableSearchable,
     showLabels: Boolean = true,
     labelMaxLines: Int = 1,
-    highlight: Boolean = false
+    highlight: Boolean = false,
+    /**
+     * If false, the item doesn't react to clicks (used while rearranging the app drawer).
+     */
+    enabled: Boolean = true,
 ) {
     val viewModel: SearchableItemVM = listItemViewModel(key = "search-${item.key}")
     val iconSize = LocalGridSettings.current.iconSize.dp.toPixels()
@@ -112,18 +116,20 @@ fun GridItem(
     Column(
         modifier = modifier
             .padding(4.dp)
-            .combinedClickable(
-                onClick = {
-                    if (!launchOnPress || !viewModel.launch(context, bounds)) {
+            .then(
+                if (enabled) Modifier.combinedClickable(
+                    onClick = {
+                        if (!launchOnPress || !viewModel.launch(context, bounds)) {
+                            showPopup = true
+                        }
+                    },
+                    onLongClick = {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                         showPopup = true
-                    }
-                },
-                onLongClick = {
-                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                    showPopup = true
-                },
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() },
+                    },
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() },
+                ) else Modifier
             ) then if (!showLabels) Modifier.aspectRatio(1f) else Modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,

@@ -59,6 +59,8 @@ import de.mm20.launcher2.ktx.sendWithBackgroundPermission
 import de.mm20.launcher2.search.Application
 import de.mm20.launcher2.ui.R
 import de.mm20.launcher2.ui.component.Badge
+import de.mm20.launcher2.ui.launcher.search.apps.drawer.AppDrawerVM
+import androidx.lifecycle.viewmodel.compose.viewModel
 import de.mm20.launcher2.ui.component.DefaultToolbarAction
 import de.mm20.launcher2.ui.component.ShapedLauncherIcon
 import de.mm20.launcher2.ui.component.SubmenuToolbarAction
@@ -498,6 +500,22 @@ fun AppItem(
                                 }
                             )
                         }
+                    }
+
+                    val drawerVM: AppDrawerVM = viewModel()
+                    val canRearrangeDrawer by drawerVM.canEdit
+                    val isRearrangingDrawer by drawerVM.isEditing
+                    if (canRearrangeDrawer && !isRearrangingDrawer) {
+                        toolbarActions.add(
+                            DefaultToolbarAction(
+                                label = stringResource(R.string.app_drawer_rearrange),
+                                icon = R.drawable.drag_indicator_24px,
+                            ) {
+                                drawerVM.closeFolder()
+                                drawerVM.startEditing()
+                                onBack()
+                            }
+                        )
                     }
 
                     if (app.canUninstall) {

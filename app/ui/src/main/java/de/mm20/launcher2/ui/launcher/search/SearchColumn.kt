@@ -8,7 +8,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
@@ -16,6 +18,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
@@ -27,7 +30,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.round
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -42,7 +51,17 @@ import de.mm20.launcher2.search.Contact
 import de.mm20.launcher2.search.File
 import de.mm20.launcher2.search.Location
 import de.mm20.launcher2.search.Website
+import de.mm20.launcher2.ui.R
 import de.mm20.launcher2.ui.component.LauncherCard
+import de.mm20.launcher2.ui.launcher.search.apps.drawer.AppDrawerVM
+import de.mm20.launcher2.ui.launcher.search.apps.drawer.DrawerDragState
+import de.mm20.launcher2.ui.launcher.search.apps.drawer.DrawerFolderTile
+import de.mm20.launcher2.ui.launcher.search.apps.drawer.DrawerItem
+import de.mm20.launcher2.ui.launcher.search.apps.drawer.FolderOverlay
+import de.mm20.launcher2.ui.launcher.search.apps.drawer.buildDrawerItems
+import de.mm20.launcher2.ui.launcher.search.apps.drawer.drawerDragGestures
+import de.mm20.launcher2.ui.launcher.search.apps.drawer.rememberDrawerDragState
+import de.mm20.launcher2.ui.launcher.search.common.grid.GridItem
 import de.mm20.launcher2.ui.launcher.search.apps.AppResults
 import de.mm20.launcher2.ui.launcher.search.calculator.CalculatorResults
 import de.mm20.launcher2.ui.launcher.search.calendar.CalendarResults
@@ -137,6 +156,75 @@ fun SearchColumn(
 
     val showFilters by viewModel.showFilters
 
+    val visibleProfiles = remember(profiles, profileStates) {
+        profiles.filter { profileStates[it.type]?.hidden == false }
+    }
+    val showProfileTabs = isSearchEmpty && profiles.size > 1 && allAppsEnabled
+    val selectedProfile =
+        visibleProfiles.getOrNull(selectedAppProfileIndex) ?: visibleProfiles.firstOrNull()
+    val drawerApps = if (showProfileTabs) {
+        when (selectedProfile?.type) {
+            Profile.Type.Private -> privateApps
+            Profile.Type.Work -> workApps
+            else -> apps
+        }
+    } else apps
+
+    // Custom app drawer layout (order + folders)
+    val drawerVM: AppDrawerVM = viewModel()
+    val drawerLayout by drawerVM.layout.collectAsState()
+    val isRearranging by drawerVM.isEditing
+    val drawerGridShown = isSearchEmpty && allAppsEnabled && !showList && !showFilters
+    val drawerItems by remember(drawerApps, drawerLayout, drawerGridShown) {
+        derivedStateOf {
+            if (drawerGridShown) buildDrawerItems(drawerApps, drawerLayout) else emptyList()
+        }
+    }
+    val allAppKeys by remember {
+        derivedStateOf { (apps + workApps + privateApps).map { it.key } }
+    }
+    SideEffect {
+        drawerVM.allAppKeys = allAppKeys
+    }
+    LaunchedEffect(drawerGridShown) {
+        drawerVM.canEdit.value = drawerGridShown
+        if (!drawerGridShown) drawerVM.stopEditing()
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            drawerVM.canEdit.value = false
+            drawerVM.stopEditing()
+            drawerVM.closeFolder()
+        }
+    }
+    BackHandler(isRearranging) {
+        drawerVM.stopEditing()
+    }
+
+    val density = LocalDensity.current
+    val defaultFolderName = stringResource(R.string.app_drawer_folder_default_name)
+    val dragState = rememberDrawerDragState(state)
+    SideEffect {
+        dragState.onMove = { dragged, target -> drawerVM.move(dragged, target) }
+        dragState.onMerge = { dragged, target -> drawerVM.merge(dragged, target, defaultFolderName) }
+        dragState.canMerge = { dragged, target ->
+            dragged != target && drawerItems.find { it.key == dragged } is DrawerItem.App
+        }
+        // Outside of rearrange mode, long pressing a folder starts rearranging right away.
+        // Long pressing an app shows its popup menu instead.
+        dragState.canDrag = { key ->
+            drawerVM.isEditing.value || drawerItems.find { it.key == key } is DrawerItem.Folder
+        }
+        dragState.onDragStarted = { drawerVM.startEditing() }
+        dragState.reverse = reverse
+        with(density) {
+            dragState.scrollEdgeTop = paddingValues.calculateTopPadding().toPx() + 48.dp.toPx()
+            dragState.scrollEdgeBottom = paddingValues.calculateBottomPadding().toPx() + 48.dp.toPx()
+            dragState.scrollSpeed = 800.dp.toPx()
+        }
+    }
+    val hapticFeedback = LocalHapticFeedback.current
+
     LaunchedEffect(profiles) {
         var previousState: Profile.State? = null
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
@@ -187,11 +275,17 @@ fun SearchColumn(
                 )
             }
         } else {
+          Box {
             LazyColumn(
                 state = state,
-                userScrollEnabled = userScrollEnabled,
+                userScrollEnabled = userScrollEnabled && dragState.draggedKey == null,
                 contentPadding = paddingValues,
                 reverseLayout = reverse,
+                modifier = Modifier.drawerDragGestures(
+                    dragState,
+                    enabled = drawerGridShown,
+                    hapticFeedback = hapticFeedback,
+                ),
             ) {
                 if (!hideFavs && favoritesEnabled) {
                     SearchFavorites(
@@ -213,17 +307,15 @@ fun SearchColumn(
                     }
                 }
 
-                if (isSearchEmpty && profiles.size > 1 && allAppsEnabled) {
-                    val visibleProfiles by derivedStateOf {
-                        profiles.filter { profileStates[it.type]?.hidden == false }
-                    }
-                    val selectedProfile = visibleProfiles.getOrNull(selectedAppProfileIndex) ?: visibleProfiles.firstOrNull()
+                if (showProfileTabs) {
                     AppResults(
-                        apps = when (selectedProfile?.type) {
-                            Profile.Type.Private -> privateApps
-                            Profile.Type.Work -> workApps
-                            else -> apps
-                        },
+                        apps = drawerApps,
+                        drawerItems = if (drawerGridShown) drawerItems else null,
+                        isRearranging = isRearranging,
+                        dragState = dragState,
+                        onOpenFolder = { drawerVM.openFolder(it) },
+                        onStopRearranging = { drawerVM.stopEditing() },
+                        onResetLayout = { drawerVM.reset() },
                         highlightedItem = bestMatch as? Application,
                         profiles = visibleProfiles,
                         profileStates = profileStates,
@@ -245,6 +337,12 @@ fun SearchColumn(
                 } else if (!isSearchEmpty || allAppsEnabled) {
                     AppResults(
                         apps = apps,
+                        drawerItems = if (drawerGridShown) drawerItems else null,
+                        isRearranging = isRearranging,
+                        dragState = dragState,
+                        onOpenFolder = { drawerVM.openFolder(it) },
+                        onStopRearranging = { drawerVM.stopEditing() },
+                        onResetLayout = { drawerVM.reset() },
                         highlightedItem = bestMatch as? Application,
                         columns = columns,
                         reverse = reverse,
@@ -381,10 +479,31 @@ fun SearchColumn(
                     )
                 }
             }
+            DraggedDrawerTile(dragState, drawerItems)
+          }
         }
 
     }
 
+    val openFolderId by drawerVM.openFolderId
+    val openFolder = openFolderId?.let { id ->
+        drawerItems.find { it is DrawerItem.Folder && it.folder.id == id } as? DrawerItem.Folder
+    }
+    LaunchedEffect(openFolderId, openFolder == null) {
+        // Folder was dissolved or isn't visible anymore
+        if (openFolderId != null && openFolder == null) drawerVM.closeFolder()
+    }
+    if (openFolder != null) {
+        val folderId = openFolder.folder.id
+        FolderOverlay(
+            folder = openFolder,
+            onDismiss = { drawerVM.closeFolder() },
+            onRename = { drawerVM.renameFolder(folderId, it) },
+            onMove = { from, to -> drawerVM.moveInFolder(folderId, from, to) },
+            onRemove = { drawerVM.removeFromFolder(folderId, it) },
+            onDissolve = { drawerVM.dissolveFolder(folderId) },
+        )
+    }
 
     val sheetManager = LocalBottomSheetManager.current
     HiddenItemsSheet(
@@ -414,3 +533,36 @@ fun LazyListScope.SingleResult(
     }
 }
 
+/**
+ * Floating copy of the drawer tile that is currently being dragged.
+ */
+@Composable
+private fun DraggedDrawerTile(
+    dragState: DrawerDragState,
+    drawerItems: List<DrawerItem>,
+) {
+    val key = dragState.draggedKey ?: return
+    val item = drawerItems.find { it.key == key } ?: return
+    val density = LocalDensity.current
+    val size = dragState.draggedTileSize
+    Box(
+        modifier = Modifier
+            .zIndex(1f)
+            .offset { (dragState.draggedTilePosition - dragState.containerOffset).round() }
+            .size(with(density) { size.width.toDp() }, with(density) { size.height.toDp() })
+            .graphicsLayer {
+                scaleX = 1.1f
+                scaleY = 1.1f
+            }
+    ) {
+        when (item) {
+            is DrawerItem.App -> GridItem(
+                item = item.app,
+                showLabels = LocalGridSettings.current.showLabels,
+                enabled = false,
+            )
+
+            is DrawerItem.Folder -> DrawerFolderTile(folder = item)
+        }
+    }
+}
