@@ -1,0 +1,36 @@
+<component name="ProjectRunConfigurationManager">
+  <!--
+    Build the `defaultDebug` variant, install it on the selected device and launch it.
+    Installs as de.mm20.launcher2.debug, next to any other Kvaesitso install.
+    Make sure "defaultDebug" is selected for :app:app in Build > Select Build Variant.
+    Xiaomi / HyperOS: enable Developer options > "Install via USB" and accept the prompt
+    on the phone, otherwise the install fails with INSTALL_FAILED_USER_RESTRICTED.
+  -->
+  <configuration default="false" name="Kvaesitso Debug" type="AndroidRunConfigurationType" factoryName="Android App" activateToolWindowBeforeRun="false">
+    <module name="Kvaesitso.app.app" />
+    <option name="ANDROID_RUN_CONFIGURATION_SCHEMA_VERSION" value="1" />
+    <option name="DEPLOY" value="true" />
+    <option name="DEPLOY_APK_FROM_BUNDLE" value="false" />
+    <option name="DEPLOY_AS_INSTANT" value="false" />
+    <option name="ARTIFACT_NAME" value="" />
+    <option name="PM_INSTALL_OPTIONS" value="" />
+    <option name="ALL_USERS" value="false" />
+    <option name="ALWAYS_INSTALL_WITH_PM" value="false" />
+    <option name="ALLOW_ASSUME_VERIFIED" value="false" />
+    <option name="CLEAR_APP_STORAGE" value="false" />
+    <option name="DYNAMIC_FEATURES_DISABLED_LIST" value="" />
+    <option name="ACTIVITY_EXTRA_FLAGS" value="" />
+    <option name="MODE" value="specific_activity" />
+    <option name="RESTORE_ENABLED" value="false" />
+    <option name="RESTORE_FILE" value="" />
+    <option name="RESTORE_FRESH_INSTALL_ONLY" value="false" />
+    <option name="CLEAR_LOGCAT" value="false" />
+    <option name="SHOW_LOGCAT_AUTOMATICALLY" value="false" />
+    <option name="TARGET_SELECTION_MODE" value="DEVICE_AND_SNAPSHOT_COMBO_BOX" />
+    <option name="DEBUGGER_TYPE" value="Auto" />
+    <option name="ACTIVITY_CLASS" value="de.mm20.launcher2.ui.launcher.LauncherActivity" />
+    <method v="2">
+      <option name="Android.Gradle.BeforeRunTask" enabled="true" />
+    </method>
+  </configuration>
+</component>
