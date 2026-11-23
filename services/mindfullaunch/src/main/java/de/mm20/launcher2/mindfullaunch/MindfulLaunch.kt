@@ -31,9 +31,38 @@ class MindfulLaunch internal constructor(
     val data: StateFlow<MindfulLaunchData?> = store.data
         .stateIn(scope, SharingStarted.Eagerly, null)
 
+    /**
+     * When each watched app was last opened through the pause screen (this process only; usage
+     * stats cover the rest).
+     */
+    private val lastOpened = mutableMapOf<String, Long>()
+
     fun shouldPause(packageName: String): Boolean {
         val data = data.value ?: return false
-        return data.enabled && packageName in data.watchedPackages
+        if (!data.enabled || packageName !in data.watchedPackages) return false
+        return !wasUsedWithin(packageName, data.graceSeconds)
+    }
+
+    /**
+     * Whether the app was opened or in the foreground within the last [seconds].
+     */
+    private fun wasUsedWithin(packageName: String, seconds: Int): Boolean {
+        if (seconds <= 0) return false
+        val now = System.currentTimeMillis()
+        val since = now - seconds * 1000L
+        if ((lastOpened[packageName] ?: 0L) >= since) return true
+        if (!hasUsageAccess()) return false
+        val usm = context.getSystemService<UsageStatsManager>() ?: return false
+        val lastUsed = try {
+            usm.queryAndAggregateUsageStats(since - 60_000L, now)[packageName]?.lastTimeUsed ?: 0L
+        } catch (e: Exception) {
+            0L
+        }
+        return lastUsed >= since
+    }
+
+    fun setGraceSeconds(seconds: Int) {
+        scope.launch { store.update { it.copy(graceSeconds = seconds.coerceIn(0, 3600)) } }
     }
 
     fun opensToday(packageName: String): Int {
@@ -64,7 +93,10 @@ class MindfulLaunch internal constructor(
     /**
      * The user went through with opening the app.
      */
-    fun recordOpen(packageName: String) = count(packageName, skipped = false)
+    fun recordOpen(packageName: String) {
+        lastOpened[packageName] = System.currentTimeMillis()
+        count(packageName, skipped = false)
+    }
 
     /**
      * The user decided not to open the app.

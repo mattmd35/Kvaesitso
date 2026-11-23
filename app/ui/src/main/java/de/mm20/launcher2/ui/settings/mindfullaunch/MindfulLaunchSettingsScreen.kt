@@ -47,6 +47,7 @@ import de.mm20.launcher2.ui.common.SearchablePicker
 import de.mm20.launcher2.ui.component.DismissableBottomSheet
 import de.mm20.launcher2.ui.component.ShapedLauncherIcon
 import de.mm20.launcher2.ui.component.preferences.MainSwitchPreference
+import de.mm20.launcher2.ui.component.preferences.ListPreference
 import de.mm20.launcher2.ui.component.preferences.Preference
 import de.mm20.launcher2.ui.component.preferences.PreferenceCategory
 import de.mm20.launcher2.ui.component.preferences.PreferenceScreen
@@ -77,6 +78,7 @@ class MindfulLaunchSettingsScreenVM : ViewModel(), KoinComponent {
     fun setInterruptions(enabled: Boolean? = null, minutes: Int? = null) =
         mindfulLaunch.setInterruptions(enabled, minutes)
     fun setSpicy(spicy: Boolean) = mindfulLaunch.setSpicy(spicy)
+    fun setGraceSeconds(seconds: Int) = mindfulLaunch.setGraceSeconds(seconds)
     fun setUnlockMath(enabled: Boolean) = mindfulLaunch.setUnlockMath(enabled)
     fun setUnlockTyping(enabled: Boolean) = mindfulLaunch.setUnlockTyping(enabled)
     fun setNfcUnlock(enabled: Boolean) = mindfulLaunch.setNfcUnlock(enabled)
@@ -127,6 +129,21 @@ fun MindfulLaunchSettingsScreen() {
                     max = 30,
                     onValueChanged = { viewModel.setDelay(it) },
                     label = { Text(stringResource(R.string.mindful_launch_delay_value, it)) },
+                )
+                ListPreference(
+                    title = stringResource(R.string.mindful_launch_grace),
+                    icon = R.drawable.schedule_24px,
+                    items = listOf(
+                        stringResource(R.string.mindful_launch_grace_off) to 0,
+                        "30 s" to 30,
+                        "1 min" to 60,
+                        "2 min" to 120,
+                        "5 min" to 300,
+                        "10 min" to 600,
+                        "15 min" to 900,
+                    ),
+                    value = data.graceSeconds,
+                    onValueChanged = { viewModel.setGraceSeconds(it) },
                 )
             }
         }

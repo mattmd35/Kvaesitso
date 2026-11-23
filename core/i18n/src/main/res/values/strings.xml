@@ -1338,4 +1338,6 @@
     <string name="mindful_launch_unlock_submit">Check</string>
     <string name="mindful_launch_unlock_typing_prompt">Type this to open:</string>
     <string name="mindful_launch_unlock_typing_sentence">I really want to open %1$s right now</string>
+    <string name="mindful_launch_grace">Skip the pause if used in the last</string>
+    <string name="mindful_launch_grace_off">Always pause</string>
 </resources>

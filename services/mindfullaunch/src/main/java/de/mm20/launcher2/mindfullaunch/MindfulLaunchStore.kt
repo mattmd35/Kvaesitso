@@ -55,6 +55,10 @@ data class MindfulLaunchData(
      * Unlock by typing out a sentence.
      */
     val unlockTyping: Boolean = false,
+    /**
+     * Skip the pause if the app was in use within this many seconds (0 = always pause).
+     */
+    val graceSeconds: Int = 120,
 )
 
 class MindfulLaunchStore internal constructor(
