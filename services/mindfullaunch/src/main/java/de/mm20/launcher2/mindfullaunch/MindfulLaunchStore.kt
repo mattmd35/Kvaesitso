@@ -33,6 +33,20 @@ data class MindfulLaunchData(
     val day: Int = 0,
     val opensToday: Map<String, Int> = emptyMap(),
     val skipsToday: Map<String, Int> = emptyMap(),
+    /**
+     * Pop up a reminder every [interruptionMinutes] while a watched app stays open.
+     */
+    val interruptionsEnabled: Boolean = false,
+    val interruptionMinutes: Int = 10,
+    /**
+     * Use the sweary phrase set.
+     */
+    val spicy: Boolean = false,
+    /**
+     * Watched apps only open after scanning one of [nfcTagIds] (hex tag UIDs).
+     */
+    val nfcUnlock: Boolean = false,
+    val nfcTagIds: Set<String> = emptySet(),
 )
 
 class MindfulLaunchStore internal constructor(

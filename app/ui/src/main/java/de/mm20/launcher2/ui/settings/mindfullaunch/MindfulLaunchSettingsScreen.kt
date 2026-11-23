@@ -1,6 +1,20 @@
 package de.mm20.launcher2.ui.settings.mindfullaunch
 
+import android.content.Intent
+import android.net.Uri
+import android.nfc.NfcAdapter
 import android.os.Process
+import android.provider.Settings
+import android.widget.Toast
+import androidx.activity.compose.LocalActivity
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import de.mm20.launcher2.ui.component.preferences.SwitchPreference
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
@@ -60,6 +74,15 @@ class MindfulLaunchSettingsScreenVM : ViewModel(), KoinComponent {
     fun setWatched(packageName: String, watched: Boolean) =
         mindfulLaunch.setWatched(packageName, watched)
 
+    fun setInterruptions(enabled: Boolean? = null, minutes: Int? = null) =
+        mindfulLaunch.setInterruptions(enabled, minutes)
+    fun setSpicy(spicy: Boolean) = mindfulLaunch.setSpicy(spicy)
+    fun setNfcUnlock(enabled: Boolean) = mindfulLaunch.setNfcUnlock(enabled)
+    fun addNfcTag(id: ByteArray) = mindfulLaunch.addNfcTag(id)
+    fun clearNfcTags() = mindfulLaunch.clearNfcTags()
+    fun hasUsageAccess() = mindfulLaunch.hasUsageAccess()
+    fun canDrawOverlays() = mindfulLaunch.canDrawOverlays()
+
     fun getApp(packageName: String): Flow<Application?> =
         appRepository.findOne(packageName, Process.myUserHandle())
 
@@ -72,6 +95,17 @@ fun MindfulLaunchSettingsScreen() {
     val viewModel: MindfulLaunchSettingsScreenVM = viewModel()
     val data by viewModel.data.collectAsStateWithLifecycle()
     var showPicker by rememberSaveable { mutableStateOf(false) }
+    var showNfcDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val nfcAdapter = remember { NfcAdapter.getDefaultAdapter(context) }
+
+    // Permissions may have been granted in the system settings
+    var hasUsageAccess by remember { mutableStateOf(viewModel.hasUsageAccess()) }
+    var canDrawOverlays by remember { mutableStateOf(viewModel.canDrawOverlays()) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        hasUsageAccess = viewModel.hasUsageAccess()
+        canDrawOverlays = viewModel.canDrawOverlays()
+    }
 
     PreferenceScreen(title = stringResource(R.string.mindful_launch)) {
         val data = data ?: return@PreferenceScreen
@@ -114,6 +148,140 @@ fun MindfulLaunchSettingsScreen() {
                 )
             }
         }
+        item {
+            PreferenceCategory(stringResource(R.string.mindful_launch_category_interruptions)) {
+                SwitchPreference(
+                    title = stringResource(R.string.mindful_launch_interruptions),
+                    summary = stringResource(R.string.mindful_launch_interruptions_summary),
+                    icon = R.drawable.notifications_24px,
+                    value = data.interruptionsEnabled,
+                    onValueChanged = { viewModel.setInterruptions(enabled = it) },
+                )
+                if (data.interruptionsEnabled && !hasUsageAccess) {
+                    Preference(
+                        title = stringResource(R.string.mindful_launch_usage_permission),
+                        summary = stringResource(R.string.mindful_launch_usage_permission_summary),
+                        icon = R.drawable.warning_24px,
+                        onClick = {
+                            context.startActivity(
+                                Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+                                    .setData(Uri.parse("package:${context.packageName}"))
+                            )
+                        },
+                    )
+                }
+                if (data.interruptionsEnabled && !canDrawOverlays) {
+                    Preference(
+                        title = stringResource(R.string.mindful_launch_overlay_permission),
+                        summary = stringResource(R.string.mindful_launch_overlay_permission_summary),
+                        icon = R.drawable.warning_24px,
+                        onClick = {
+                            context.startActivity(
+                                Intent(
+                                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                    Uri.parse("package:${context.packageName}")
+                                )
+                            )
+                        },
+                    )
+                }
+                SliderPreference(
+                    title = stringResource(R.string.mindful_launch_interval),
+                    icon = R.drawable.timer_24px,
+                    value = data.interruptionMinutes,
+                    min = 1,
+                    max = 60,
+                    enabled = data.interruptionsEnabled,
+                    onValueChanged = { viewModel.setInterruptions(minutes = it) },
+                    label = { Text(stringResource(R.string.mindful_launch_interval_value, it)) },
+                )
+            }
+        }
+        item {
+            PreferenceCategory(stringResource(R.string.mindful_launch_category_tone)) {
+                SwitchPreference(
+                    title = stringResource(R.string.mindful_launch_spicy),
+                    summary = stringResource(R.string.mindful_launch_spicy_summary),
+                    icon = R.drawable.mood_24px,
+                    value = data.spicy,
+                    onValueChanged = { viewModel.setSpicy(it) },
+                )
+            }
+        }
+        item {
+            PreferenceCategory(stringResource(R.string.mindful_launch_category_nfc)) {
+                if (nfcAdapter == null) {
+                    Preference(
+                        title = { Text(stringResource(R.string.mindful_launch_nfc_unavailable)) },
+                        enabled = false,
+                    )
+                } else {
+                    SwitchPreference(
+                        title = stringResource(R.string.mindful_launch_nfc),
+                        summary = stringResource(R.string.mindful_launch_nfc_summary),
+                        icon = R.drawable.lock_24px,
+                        value = data.nfcUnlock && data.nfcTagIds.isNotEmpty(),
+                        enabled = data.nfcTagIds.isNotEmpty(),
+                        onValueChanged = { viewModel.setNfcUnlock(it) },
+                    )
+                    Preference(
+                        title = stringResource(R.string.mindful_launch_nfc_register),
+                        summary = if (data.nfcTagIds.isEmpty()) stringResource(R.string.mindful_launch_nfc_none)
+                        else pluralStringResource(
+                            R.plurals.mindful_launch_nfc_registered,
+                            data.nfcTagIds.size,
+                            data.nfcTagIds.size
+                        ),
+                        icon = R.drawable.add_24px,
+                        onClick = {
+                            if (nfcAdapter.isEnabled) showNfcDialog = true
+                            else context.startActivity(Intent(Settings.ACTION_NFC_SETTINGS))
+                        },
+                    )
+                    if (data.nfcTagIds.isNotEmpty()) {
+                        Preference(
+                            title = stringResource(R.string.mindful_launch_nfc_clear),
+                            icon = R.drawable.delete_24px,
+                            onClick = { viewModel.clearNfcTags() },
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (showNfcDialog && nfcAdapter != null) {
+        val activity = LocalActivity.current
+        DisposableEffect(activity) {
+            activity?.let { act ->
+                nfcAdapter.enableReaderMode(
+                    act,
+                    { tag ->
+                        act.runOnUiThread {
+                            viewModel.addNfcTag(tag.id)
+                            Toast.makeText(act, R.string.mindful_launch_nfc_added, Toast.LENGTH_SHORT).show()
+                            showNfcDialog = false
+                        }
+                    },
+                    NfcAdapter.FLAG_READER_NFC_A or NfcAdapter.FLAG_READER_NFC_B or
+                            NfcAdapter.FLAG_READER_NFC_F or NfcAdapter.FLAG_READER_NFC_V or
+                            NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK,
+                    null,
+                )
+            }
+            onDispose { activity?.let { nfcAdapter.disableReaderMode(it) } }
+        }
+        AlertDialog(
+            onDismissRequest = { showNfcDialog = false },
+            title = { Text(stringResource(R.string.mindful_launch_nfc_register)) },
+            text = { Text(stringResource(R.string.mindful_launch_nfc_scan_now)) },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showNfcDialog = false }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+            },
+        )
     }
 
     DismissableBottomSheet(

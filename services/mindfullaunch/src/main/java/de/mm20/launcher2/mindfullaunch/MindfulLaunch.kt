@@ -1,5 +1,11 @@
 package de.mm20.launcher2.mindfullaunch
 
+import android.app.AppOpsManager
+import android.app.usage.UsageStatsManager
+import android.content.Context
+import android.os.Process
+import android.provider.Settings
+import androidx.core.content.getSystemService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -14,6 +20,7 @@ import java.util.Calendar
  * so opening them is a decision rather than a reflex. Nothing is blocked.
  */
 class MindfulLaunch internal constructor(
+    private val context: Context,
     private val store: MindfulLaunchStore,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -78,6 +85,73 @@ class MindfulLaunch internal constructor(
             }
         }
     }
+
+    fun setInterruptions(enabled: Boolean? = null, minutes: Int? = null) {
+        scope.launch {
+            store.update {
+                it.copy(
+                    interruptionsEnabled = enabled ?: it.interruptionsEnabled,
+                    interruptionMinutes = (minutes ?: it.interruptionMinutes).coerceIn(1, 120),
+                )
+            }
+        }
+    }
+
+    fun setSpicy(spicy: Boolean) {
+        scope.launch { store.update { it.copy(spicy = spicy) } }
+    }
+
+    fun setNfcUnlock(enabled: Boolean) {
+        scope.launch { store.update { it.copy(nfcUnlock = enabled) } }
+    }
+
+    fun addNfcTag(id: ByteArray) {
+        val hex = id.toHex()
+        scope.launch { store.update { it.copy(nfcTagIds = it.nfcTagIds + hex) } }
+    }
+
+    fun clearNfcTags() {
+        scope.launch { store.update { it.copy(nfcTagIds = emptySet(), nfcUnlock = false) } }
+    }
+
+    /**
+     * Whether opening watched apps currently needs an NFC tag scan.
+     */
+    fun requiresNfc(): Boolean {
+        val data = data.value ?: return false
+        return data.nfcUnlock && data.nfcTagIds.isNotEmpty()
+    }
+
+    fun isKnownTag(id: ByteArray): Boolean = data.value?.nfcTagIds?.contains(id.toHex()) == true
+
+    fun hasUsageAccess(): Boolean {
+        val appOps = context.getSystemService<AppOpsManager>() ?: return false
+        return appOps.unsafeCheckOpNoThrow(
+            AppOpsManager.OPSTR_GET_USAGE_STATS,
+            Process.myUid(),
+            context.packageName
+        ) == AppOpsManager.MODE_ALLOWED
+    }
+
+    fun canDrawOverlays(): Boolean = Settings.canDrawOverlays(context)
+
+    /**
+     * Foreground time of [packageName] since midnight, or null without usage access.
+     */
+    fun foregroundTimeToday(packageName: String): Long? {
+        if (!hasUsageAccess()) return null
+        val usm = context.getSystemService<UsageStatsManager>() ?: return null
+        val start = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+        val stats = usm.queryAndAggregateUsageStats(start, System.currentTimeMillis())
+        return stats[packageName]?.totalTimeInForeground ?: 0L
+    }
+
+    private fun ByteArray.toHex() = joinToString("") { "%02x".format(it) }
 
     private fun Map<String, Int>.increment(key: String) = this + (key to ((this[key] ?: 0) + 1))
 

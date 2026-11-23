@@ -1,8 +1,12 @@
 package de.mm20.launcher2.ui.mindfullaunch
 
+import android.content.Intent
+import android.nfc.NfcAdapter
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -35,7 +39,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -43,7 +49,6 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.mm20.launcher2.icons.IconService
 import de.mm20.launcher2.mindfullaunch.MindfulLaunch
@@ -55,12 +60,24 @@ import de.mm20.launcher2.ui.base.ProvideSettings
 import de.mm20.launcher2.ui.component.ShapedLauncherIcon
 import de.mm20.launcher2.ui.ktx.toPixels
 import de.mm20.launcher2.ui.theme.LauncherTheme
+import kotlinx.coroutines.delay
 import org.koin.android.ext.android.inject
 import kotlin.math.ceil
 
+internal enum class NfcGate {
+    /** No NFC needed: the countdown unlocks "Open". */
+    None,
+    /** Waiting for a registered tag. */
+    Ready,
+    /** NFC is needed but switched off in system settings. */
+    Off,
+    /** A tag was scanned, but it isn't a registered one. */
+    WrongTag,
+}
+
 /**
- * The pause before a watched app opens. Not a blocker: after a short breathing countdown the
- * app can be opened. "Not now" (or back) returns to the home screen.
+ * The pause before a watched app opens. After a short breathing countdown the app can be opened,
+ * or, with NFC unlock, only after scanning a registered tag. "Not now" (or back) returns home.
  */
 class MindfulLaunchActivity : BaseActivity() {
     private val mindfulLaunch: MindfulLaunch by inject()
@@ -68,7 +85,9 @@ class MindfulLaunchActivity : BaseActivity() {
     private val iconService: IconService by inject()
 
     private var searchable: SavableSearchable? = null
+    private var packageName: String? = null
     private var decided = false
+    private var nfcGate by mutableStateOf(NfcGate.None)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -76,16 +95,20 @@ class MindfulLaunchActivity : BaseActivity() {
         MindfulLaunchGate.pending = null
         this.searchable = searchable
         val packageName = MindfulLaunchGate.packageOf(searchable) ?: return finish()
+        this.packageName = packageName
 
         enableEdgeToEdge()
 
-        val delaySeconds = mindfulLaunch.data.value?.delaySeconds ?: 5
+        val data = mindfulLaunch.data.value
+        val delaySeconds = data?.delaySeconds ?: 5
         val opensToday = mindfulLaunch.opensToday(packageName)
+        val timeToday = mindfulLaunch.foregroundTimeToday(packageName)
+        val phrase = MindfulText.phrase(this, data?.spicy == true)
 
         setContent {
             LauncherTheme {
                 ProvideSettings {
-                    BackHandler { skip(packageName) }
+                    BackHandler { skip() }
                     val iconSize = 96.dp
                     val iconPx = iconSize.toPixels().toInt()
                     val icon by remember(searchable.key) {
@@ -93,30 +116,72 @@ class MindfulLaunchActivity : BaseActivity() {
                     }.collectAsStateWithLifecycle(null)
 
                     PauseScreen(
+                        phrase = phrase,
                         label = searchable.labelOverride ?: searchable.label,
                         opensToday = opensToday,
+                        timeToday = timeToday,
                         delaySeconds = delaySeconds,
+                        nfcGate = nfcGate,
                         icon = { ShapedLauncherIcon(size = iconSize, icon = { icon }) },
-                        onOpen = { open(searchable, packageName) },
-                        onSkip = { skip(packageName) },
+                        onOpen = { open() },
+                        onSkip = { skip() },
+                        onEnableNfc = {
+                            startActivity(Intent(Settings.ACTION_NFC_SETTINGS))
+                        },
+                        onWrongTagShown = { nfcGate = NfcGate.Ready },
                     )
                 }
             }
         }
     }
 
-    private fun open(searchable: SavableSearchable, packageName: String) {
+    override fun onResume() {
+        super.onResume()
+        val adapter = NfcAdapter.getDefaultAdapter(this)
+        nfcGate = when {
+            // Without NFC hardware (e.g. settings restored from another phone) fall back to the countdown
+            !mindfulLaunch.requiresNfc() || adapter == null -> NfcGate.None
+            !adapter.isEnabled -> NfcGate.Off
+            else -> NfcGate.Ready
+        }
+        if (nfcGate == NfcGate.Ready) {
+            adapter?.enableReaderMode(
+                this,
+                { tag ->
+                    val known = mindfulLaunch.isKnownTag(tag.id)
+                    runOnUiThread {
+                        if (known) open() else nfcGate = NfcGate.WrongTag
+                    }
+                },
+                NfcAdapter.FLAG_READER_NFC_A or NfcAdapter.FLAG_READER_NFC_B or
+                        NfcAdapter.FLAG_READER_NFC_F or NfcAdapter.FLAG_READER_NFC_V or
+                        NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK,
+                null,
+            )
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        NfcAdapter.getDefaultAdapter(this)?.disableReaderMode(this)
+    }
+
+    private fun open() {
+        val searchable = searchable ?: return
+        val packageName = packageName ?: return
         if (decided) return
         decided = true
         if (searchable.launch(this, null)) {
             favoritesService.reportLaunch(searchable)
             mindfulLaunch.recordOpen(packageName)
+            MindfulInterrupter.onOpenedThroughPause(packageName)
         }
         finish()
         overridePendingTransition(0, 0)
     }
 
-    private fun skip(packageName: String) {
+    private fun skip() {
+        val packageName = packageName ?: return finish()
         if (decided) return
         decided = true
         mindfulLaunch.recordSkip(packageName)
@@ -125,19 +190,25 @@ class MindfulLaunchActivity : BaseActivity() {
 
     override fun onStop() {
         super.onStop()
-        // Left via home/recents: don't linger on top of the launcher.
-        if (!isChangingConfigurations && !isFinishing) finish()
+        // Left via home/recents: don't linger on top of the launcher. Opening the NFC settings
+        // also stops this activity, but then we want to come back.
+        if (!isChangingConfigurations && !isFinishing && nfcGate != NfcGate.Off) finish()
     }
 }
 
 @Composable
 private fun PauseScreen(
+    phrase: String,
     label: String,
     opensToday: Int,
+    timeToday: Long?,
     delaySeconds: Int,
+    nfcGate: NfcGate,
     icon: @Composable () -> Unit,
     onOpen: () -> Unit,
     onSkip: () -> Unit,
+    onEnableNfc: () -> Unit,
+    onWrongTagShown: () -> Unit,
 ) {
     val progress = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
@@ -145,6 +216,12 @@ private fun PauseScreen(
             1f,
             tween(durationMillis = delaySeconds * 1000, easing = LinearEasing)
         )
+    }
+    LaunchedEffect(nfcGate) {
+        if (nfcGate == NfcGate.WrongTag) {
+            delay(2000)
+            onWrongTagShown()
+        }
     }
     val done = progress.value >= 1f
     val remaining = ceil((1f - progress.value) * delaySeconds).toInt()
@@ -193,26 +270,30 @@ private fun PauseScreen(
             }
             Spacer(Modifier.height(32.dp))
             Text(
-                text = stringResource(R.string.mindful_launch_breathe),
+                text = phrase,
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(12.dp))
             Text(
-                text = stringResource(R.string.mindful_launch_question, label),
+                text = if (opensToday == 0) stringResource(R.string.mindful_launch_first_today)
+                else pluralStringResource(R.plurals.mindful_launch_opens_today, opensToday, opensToday),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = if (opensToday == 0) stringResource(R.string.mindful_launch_first_today)
-                else pluralStringResource(R.plurals.mindful_launch_opens_today, opensToday, opensToday),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
+            if (timeToday != null && timeToday >= 60_000) {
+                Text(
+                    text = stringResource(
+                        R.string.mindful_launch_time_today,
+                        MindfulText.duration(timeToday)
+                    ),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
             Spacer(Modifier.height(48.dp))
             // "Not now" is the prominent action; opening is available but quieter.
             Button(
@@ -222,21 +303,40 @@ private fun PauseScreen(
                 Text(stringResource(R.string.mindful_launch_skip))
             }
             Spacer(Modifier.height(8.dp))
-            OutlinedButton(
-                onClick = onOpen,
-                enabled = done,
-                modifier = Modifier.fillMaxWidth(0.7f),
-            ) {
-                AnimatedContent(
-                    targetState = if (done) -1 else remaining,
-                    transitionSpec = { fadeIn() togetherWith fadeOut() },
-                    label = "openLabel",
+            when (nfcGate) {
+                NfcGate.None -> OutlinedButton(
+                    onClick = onOpen,
+                    enabled = done,
+                    modifier = Modifier.fillMaxWidth(0.7f),
                 ) {
-                    Text(
-                        if (it < 0) stringResource(R.string.mindful_launch_open, label)
-                        else stringResource(R.string.mindful_launch_wait, it)
-                    )
+                    AnimatedContent(
+                        targetState = if (done) -1 else remaining,
+                        transitionSpec = { fadeIn() togetherWith fadeOut() },
+                        label = "openLabel",
+                    ) {
+                        Text(
+                            if (it < 0) stringResource(R.string.mindful_launch_open, label)
+                            else stringResource(R.string.mindful_launch_wait, it)
+                        )
+                    }
                 }
+
+                NfcGate.Off -> OutlinedButton(
+                    onClick = onEnableNfc,
+                    modifier = Modifier.fillMaxWidth(0.7f),
+                ) {
+                    Text(stringResource(R.string.mindful_launch_nfc_turn_on))
+                }
+
+                NfcGate.Ready, NfcGate.WrongTag -> Text(
+                    text = if (nfcGate == NfcGate.WrongTag) stringResource(R.string.mindful_launch_nfc_wrong_tag)
+                    else stringResource(R.string.mindful_launch_nfc_scan_to_open, label),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (nfcGate == NfcGate.WrongTag) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(vertical = 12.dp),
+                )
             }
         }
     }

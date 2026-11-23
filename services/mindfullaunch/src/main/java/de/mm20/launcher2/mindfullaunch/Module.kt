@@ -8,5 +8,5 @@ import org.koin.dsl.module
 val mindfulLaunchModule = module {
     single { MindfulLaunchStore(androidContext()) }
     factory<Backupable>(named<MindfulLaunchStore>()) { get<MindfulLaunchStore>() }
-    single { MindfulLaunch(get()) }
+    single { MindfulLaunch(androidContext(), get()) }
 }

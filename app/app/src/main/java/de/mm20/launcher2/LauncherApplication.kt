@@ -116,6 +116,8 @@ class LauncherApplication : Application(), CoroutineScope, ImageLoaderFactory {
 
         // Night screen overlay lives in the launcher process
         GlobalContext.get().get<NightScreen>().start()
+        // Mindful launch reminders while watched apps are open
+        de.mm20.launcher2.ui.mindfullaunch.MindfulInterrupter.start(this)
     }
 
     override fun newImageLoader(): ImageLoader {

@@ -1243,4 +1243,64 @@
     <string name="mindful_launch_wait">Wait %1$d…</string>
     <string name="menu_mindful_launch_add">Pause before opening</string>
     <string name="menu_mindful_launch_remove">Stop pausing before opening</string>
+    <string name="mindful_launch_time_today">%1$s today</string>
+    <string name="mindful_launch_category_interruptions">Interruptions</string>
+    <string name="mindful_launch_interruptions">Interrupt me while I\'m in them</string>
+    <string name="mindful_launch_interruptions_summary">Pops up a reminder every few minutes while a watched app stays open</string>
+    <string name="mindful_launch_interval">Every</string>
+    <string name="mindful_launch_interval_value">%1$d min</string>
+    <string name="mindful_launch_usage_permission">Allow usage access</string>
+    <string name="mindful_launch_usage_permission_summary">Needed to notice when a watched app is open and to show screen time</string>
+    <string name="mindful_launch_overlay_permission">Allow display over other apps</string>
+    <string name="mindful_launch_overlay_permission_summary">Needed to show the reminder on top of the app</string>
+    <string name="mindful_launch_category_tone">Tone</string>
+    <string name="mindful_launch_spicy">Spicy language</string>
+    <string name="mindful_launch_spicy_summary">Swear at me a little. Gentle phrases when off</string>
+    <string name="mindful_launch_category_nfc">NFC unlock</string>
+    <string name="mindful_launch_nfc">Require NFC tag to open</string>
+    <string name="mindful_launch_nfc_summary">Watched apps only open after scanning a registered card or tag. Keep it in another room.</string>
+    <string name="mindful_launch_nfc_register">Register a tag</string>
+    <plurals name="mindful_launch_nfc_registered">
+        <item quantity="one">%1$d tag registered</item>
+        <item quantity="other">%1$d tags registered</item>
+    </plurals>
+    <string name="mindful_launch_nfc_none">No tag registered yet</string>
+    <string name="mindful_launch_nfc_clear">Forget all tags</string>
+    <string name="mindful_launch_nfc_scan_now">Hold a card or tag against the back of the phone…</string>
+    <string name="mindful_launch_nfc_added">Tag registered</string>
+    <string name="mindful_launch_nfc_unavailable">This phone has no NFC</string>
+    <string name="mindful_launch_nfc_off">NFC is off</string>
+    <string name="mindful_launch_nfc_turn_on">Turn on NFC</string>
+    <string name="mindful_launch_nfc_scan_to_open">Scan your tag to open %1$s</string>
+    <string name="mindful_launch_nfc_wrong_tag">That\'s not your tag</string>
+    <string name="mindful_launch_session">%1$s on %2$s so far</string>
+    <string name="mindful_launch_close_app">Close it</string>
+    <string name="mindful_launch_keep_going">Keep going</string>
+    <string name="mindful_launch_keep_going_wait">Keep going (%1$d)</string>
+    <string-array name="mindful_phrases">
+        <item>Are you sure you want to do this?</item>
+        <item>Is this what you came here for?</item>
+        <item>What were you about to do before this?</item>
+        <item>You can always come back later.</item>
+        <item>Will this make you feel better, or worse?</item>
+        <item>Take a breath first.</item>
+        <item>Is this the best use of the next ten minutes?</item>
+        <item>Future you is watching.</item>
+        <item>Nothing important happened in there. Promise.</item>
+        <item>Maybe go outside for a bit?</item>
+    </string-array>
+    <string-array name="mindful_phrases_spicy">
+        <item>Are you fucking sure you wanna do that?</item>
+        <item>Seriously? This shit again?</item>
+        <item>Put the damn phone down.</item>
+        <item>You said you\'d stop. Liar.</item>
+        <item>Scrolling won\'t fix your life, dumbass.</item>
+        <item>Go touch some grass, for fuck\'s sake.</item>
+        <item>Is this really worth it? Hell no.</item>
+        <item>Oh for fuck\'s sake, again?</item>
+        <item>Your future self thinks you\'re an idiot right now.</item>
+        <item>Nobody in there gives a shit about you. Log off.</item>
+        <item>Congrats, you\'ve wasted another chunk of your life.</item>
+        <item>Get your shit together and close this.</item>
+    </string-array>
 </resources>
