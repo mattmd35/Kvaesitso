@@ -12,6 +12,9 @@
     <uses-permission android:name="com.kieronquinn.app.smartspacer.permission.ACCESS_SMARTSPACER"/>
     <uses-sdk tools:overrideLibrary="com.kieronquinn.app.smartspacer.sdk,com.kieronquinn.app.smartspacer.sdk.client" />
 
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
     <application>
 
         <service
@@ -102,6 +105,15 @@
         </activity>
 
         <activity android:name=".launcher.sheets.BindAndConfigureAppWidgetActivity" />
+
+        <service
+            android:name=".mindfullaunch.MindfulSessionService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Keeps screen-time reminders running while a user-selected app is open" />
+        </service>
 
         <activity
             android:name=".mindfullaunch.MindfulLaunchActivity"

@@ -253,14 +253,25 @@ fun MindfulLaunchSettingsScreen() {
     if (showNfcDialog && nfcAdapter != null) {
         val activity = LocalActivity.current
         DisposableEffect(activity) {
+            android.util.Log.i("MindfulNfc", "register dialog: activity=$activity enabled=${nfcAdapter.isEnabled}")
             activity?.let { act ->
                 nfcAdapter.enableReaderMode(
                     act,
                     { tag ->
+                        val id = tag.id
+                        android.util.Log.i(
+                            "MindfulNfc",
+                            "register: id=${id.joinToString("") { "%02x".format(it) }} techs=${tag.techList.joinToString()}"
+                        )
                         act.runOnUiThread {
-                            viewModel.addNfcTag(tag.id)
-                            Toast.makeText(act, R.string.mindful_launch_nfc_added, Toast.LENGTH_SHORT).show()
-                            showNfcDialog = false
+                            // 4-byte IDs starting with 0x08 are random: new on every tap
+                            if (id.size == 4 && id[0] == 0x08.toByte()) {
+                                Toast.makeText(act, R.string.mindful_launch_nfc_random_id, Toast.LENGTH_LONG).show()
+                            } else {
+                                viewModel.addNfcTag(id)
+                                Toast.makeText(act, R.string.mindful_launch_nfc_added, Toast.LENGTH_SHORT).show()
+                                showNfcDialog = false
+                            }
                         }
                     },
                     NfcAdapter.FLAG_READER_NFC_A or NfcAdapter.FLAG_READER_NFC_B or

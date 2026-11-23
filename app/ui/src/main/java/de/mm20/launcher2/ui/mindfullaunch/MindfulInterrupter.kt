@@ -9,6 +9,23 @@ import android.os.PowerManager
 import android.util.Log
 import android.view.View
 import android.view.WindowManager
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.core.graphics.drawable.toBitmap
+import kotlin.math.ceil
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -104,6 +121,11 @@ object MindfulInterrupter : KoinComponent {
     fun onOpenedThroughPause(packageName: String) {
         if (!started) return
         startSession(packageName, System.currentTimeMillis())
+        // Started while our pause screen is still visible, so this is allowed. The foreground
+        // service keeps HyperOS from freezing the launcher process while the app is in use.
+        if (mindfulLaunch.data.value?.interruptionsEnabled == true) {
+            MindfulSessionService.start(context)
+        }
     }
 
     private fun tick() {
@@ -122,9 +144,10 @@ object MindfulInterrupter : KoinComponent {
         val pkg = foregroundPackage
         if (pkg != null && pkg in data.watchedPackages) {
             if (sessionPackage != pkg) {
+                if (sessionPackage != null) MindfulSessionService.stop(context)
                 startSession(pkg, now)
             } else if (now >= nextInterruption && overlay == null) {
-                showOverlay(pkg, now - sessionStart, data.spicy)
+                showOverlay(pkg, now - sessionStart, data.spicy, data.delaySeconds)
                 nextInterruption = now + data.interruptionMinutes * 60_000L
             }
         } else {
@@ -141,6 +164,7 @@ object MindfulInterrupter : KoinComponent {
     }
 
     private fun endSession() {
+        if (sessionPackage != null) MindfulSessionService.stop(context)
         sessionPackage = null
         removeOverlay()
     }
@@ -162,13 +186,18 @@ object MindfulInterrupter : KoinComponent {
         lastQuery = now
     }
 
-    private fun showOverlay(packageName: String, sessionMillis: Long, spicy: Boolean) {
+    private fun showOverlay(packageName: String, sessionMillis: Long, spicy: Boolean, waitSeconds: Int) {
         val wm = context.getSystemService<WindowManager>() ?: return
+        val pm = context.packageManager
         val label = try {
-            val pm = context.packageManager
             pm.getApplicationLabel(pm.getApplicationInfo(packageName, 0)).toString()
         } catch (e: Exception) {
             packageName
+        }
+        val icon = try {
+            pm.getApplicationIcon(packageName).toBitmap(256, 256).asImageBitmap()
+        } catch (e: Exception) {
+            null
         }
         val phrase = MindfulText.phrase(context, spicy)
         val today = mindfulLaunch.foregroundTimeToday(packageName)
@@ -179,8 +208,10 @@ object MindfulInterrupter : KoinComponent {
             setViewTreeSavedStateRegistryOwner(owner)
             setContent {
                 LauncherTheme {
-                    InterruptionCard(
+                    InterruptionScreen(
                         phrase = phrase,
+                        icon = icon,
+                        waitSeconds = waitSeconds,
                         session = context.getString(
                             R.string.mindful_launch_session,
                             MindfulText.duration(sessionMillis),
@@ -203,7 +234,8 @@ object MindfulInterrupter : KoinComponent {
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT,
         )
         try {
@@ -229,8 +261,7 @@ object MindfulInterrupter : KoinComponent {
     }
 
     private fun closeApp() {
-        removeOverlay()
-        sessionPackage = null
+        endSession()
         context.startActivity(
             Intent(Intent.ACTION_MAIN)
                 .addCategory(Intent.CATEGORY_HOME)
@@ -256,79 +287,96 @@ object MindfulInterrupter : KoinComponent {
     }
 }
 
-private const val KEEP_GOING_DELAY_S = 5
-
 @androidx.compose.runtime.Composable
-private fun InterruptionCard(
+private fun InterruptionScreen(
     phrase: String,
+    icon: ImageBitmap?,
+    waitSeconds: Int,
     session: String,
     today: String?,
     onClose: () -> Unit,
     onKeepGoing: () -> Unit,
 ) {
-    var remaining by remember { mutableIntStateOf(KEEP_GOING_DELAY_S) }
+    val progress = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
-        while (remaining > 0) {
-            delay(1000)
-            remaining--
-        }
+        progress.animateTo(1f, tween(waitSeconds * 1000, easing = LinearEasing))
     }
+    val done = progress.value >= 1f
+    val remaining = ceil((1f - progress.value) * waitSeconds).toInt()
+    val breath by rememberInfiniteTransition(label = "breath").animateFloat(
+        initialValue = 0.85f,
+        targetValue = 1.15f,
+        animationSpec = infiniteRepeatable(tween(4000, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "breathScale",
+    )
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.6f))
-            // Swallow touches so the app underneath can't be used while the card is up
+            .background(MaterialTheme.colorScheme.surfaceContainerLowest)
+            // Swallow touches so the app underneath can't be used while this is up
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
             .safeDrawingPadding()
             .padding(24.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Surface(
-            shape = MaterialTheme.shapes.extraLarge,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            modifier = Modifier.fillMaxWidth(),
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
         ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                Text(
-                    text = phrase,
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    textAlign = TextAlign.Center,
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(220.dp)) {
+                Box(
+                    modifier = Modifier
+                        .size(180.dp)
+                        .scale(breath)
+                        .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f), CircleShape)
                 )
-                Spacer(Modifier.height(16.dp))
+                CircularProgressIndicator(
+                    progress = { progress.value },
+                    modifier = Modifier.size(200.dp),
+                    strokeWidth = 3.dp,
+                    trackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    gapSize = 0.dp,
+                )
+                if (icon != null) {
+                    Image(bitmap = icon, contentDescription = null, modifier = Modifier.size(96.dp))
+                }
+            }
+            Spacer(Modifier.height(32.dp))
+            Text(
+                text = phrase,
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = session,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            if (today != null) {
                 Text(
-                    text = session,
+                    text = today,
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                 )
-                if (today != null) {
-                    Text(
-                        text = today,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                    )
-                }
-                Spacer(Modifier.height(24.dp))
-                Button(onClick = onClose, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.mindful_launch_close_app))
-                }
-                Spacer(Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = onKeepGoing,
-                    enabled = remaining == 0,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        if (remaining == 0) stringResource(R.string.mindful_launch_keep_going)
-                        else stringResource(R.string.mindful_launch_keep_going_wait, remaining)
-                    )
-                }
+            }
+            Spacer(Modifier.height(48.dp))
+            Button(onClick = onClose, modifier = Modifier.fillMaxWidth(0.7f)) {
+                Text(stringResource(R.string.mindful_launch_close_app))
+            }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = onKeepGoing,
+                enabled = done,
+                modifier = Modifier.fillMaxWidth(0.7f),
+            ) {
+                Text(
+                    if (done) stringResource(R.string.mindful_launch_keep_going)
+                    else stringResource(R.string.mindful_launch_keep_going_wait, remaining)
+                )
             }
         }
     }

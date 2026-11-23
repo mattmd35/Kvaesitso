@@ -144,11 +144,19 @@ class MindfulLaunchActivity : BaseActivity() {
             !adapter.isEnabled -> NfcGate.Off
             else -> NfcGate.Ready
         }
+        android.util.Log.i(
+            "MindfulNfc",
+            "pause screen: gate=$nfcGate requires=${mindfulLaunch.requiresNfc()} tags=${mindfulLaunch.data.value?.nfcTagIds?.size}"
+        )
         if (nfcGate == NfcGate.Ready) {
             adapter?.enableReaderMode(
                 this,
                 { tag ->
                     val known = mindfulLaunch.isKnownTag(tag.id)
+                    android.util.Log.i(
+                        "MindfulNfc",
+                        "unlock: id=${tag.id.joinToString("") { "%02x".format(it) }} known=$known"
+                    )
                     runOnUiThread {
                         if (known) open() else nfcGate = NfcGate.WrongTag
                     }

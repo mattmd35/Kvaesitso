@@ -1313,4 +1313,6 @@
     <string name="wallpaper_carousel_tone_mono">Black &amp; white</string>
     <string name="wallpaper_carousel_tone_sepia">Sepia</string>
     <string name="wallpaper_carousel_tone_faded">Faded</string>
+    <string name="mindful_launch_nfc_random_id">This card gets a new ID on every tap, so it can\'t be recognized. Try a different card or a sticker tag.</string>
+    <string name="mindful_launch_session_notification">Keeping an eye on your screen time</string>
 </resources>
