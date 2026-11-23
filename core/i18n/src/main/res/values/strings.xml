@@ -1191,6 +1191,13 @@
     <string name="wallpaper_carousel_backup_summary">Makes backups larger</string>
     <string name="wallpaper_carousel_next">Next wallpaper now</string>
     <string name="wallpaper_carousel_add">Add</string>
+    <string name="wallpaper_carousel_share_label">Add to wallpaper carousel</string>
+    <string name="wallpaper_carousel_share_adding">Adding to wallpaper carousel…</string>
+    <string name="wallpaper_carousel_share_failed">Couldn\'t add the image</string>
+    <plurals name="wallpaper_carousel_share_added">
+        <item quantity="one">Added %1$d wallpaper to the carousel</item>
+        <item quantity="other">Added %1$d wallpapers to the carousel</item>
+    </plurals>
     <string name="wallpaper_carousel_remove">Remove</string>
     <string name="wallpaper_carousel_empty">Add some images to get started. Tap an image to set it as wallpaper right away.</string>
     <plurals name="wallpaper_carousel_count">
