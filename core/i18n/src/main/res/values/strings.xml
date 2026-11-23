@@ -1161,7 +1161,14 @@
     <string name="night_screen_end">Until</string>
     <string name="night_screen_add_tile">Add to quick settings</string>
     <string name="night_screen_add_tile_summary">Toggle night screen from the notification shade</string>
-    <string name="night_screen_note">Android limits how dark overlays from apps can get, and the status bar and notification shade are always drawn above them. Combine with low system brightness for the darkest screen.</string>
+    <string name="night_screen_note">Without the accessibility service, Android limits how dark the overlay can get and draws the status bar and notification shade above it. Combine with low system brightness for the darkest screen.</string>
+    <string name="night_screen_accessibility_label">Kvaesitso night screen</string>
+    <string name="night_screen_accessibility_summary">Lets night screen also dim the status bar, notifications and quick settings</string>
+    <string name="night_screen_accessibility_description">Used only to draw the night screen dimming layer above the status bar, notification shade and quick settings, and to allow a darker screen. It does not read or change anything on your screen.</string>
+    <string name="night_screen_accessibility">Dim everything</string>
+    <string name="night_screen_accessibility_off">Also dim the status bar, notifications and quick settings, and allow a darker screen. Tap to enable the accessibility service.</string>
+    <string name="night_screen_accessibility_on">Enabled: the whole screen including notifications is dimmed</string>
+    <string name="night_screen_accessibility_restricted">If Android says the setting is restricted: open App info for Kvaesitso, tap ⋮ and choose \"Allow restricted settings\", then try again.</string>
     <string name="night_screen_turn_on">Turn on night screen</string>
     <string name="night_screen_turn_off">Turn off night screen</string>
     <!-- Wallpaper carousel -->

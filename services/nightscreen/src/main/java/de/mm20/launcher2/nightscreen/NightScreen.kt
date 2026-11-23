@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlin.math.max
@@ -44,6 +45,13 @@ class NightScreen internal constructor(
     private val now = MutableStateFlow(System.currentTimeMillis())
     private val permission = MutableStateFlow(canDrawOverlays())
 
+    /**
+     * Context of the connected accessibility service, if enabled. Accessibility overlays are
+     * drawn above the status bar, notification shade and quick settings, and they can be darker
+     * than regular overlays.
+     */
+    private val accessibilityService = MutableStateFlow<Context?>(null)
+
     val data: Flow<NightScreenData> = store.data
 
     /**
@@ -52,9 +60,37 @@ class NightScreen internal constructor(
     val isActive: StateFlow<Boolean> = combine(store.data, now) { data, time -> data.isActive(time) }
         .stateIn(scope, SharingStarted.Eagerly, false)
 
-    val hasPermission: StateFlow<Boolean> = permission
+    /**
+     * Whether night screen can be shown at all (overlay permission or accessibility service).
+     */
+    val hasPermission: StateFlow<Boolean> = combine(permission, accessibilityService) { p, a -> p || a != null }
+        .stateIn(scope, SharingStarted.Eagerly, canDrawOverlays())
+
+    /**
+     * Whether the accessibility service is connected, so the whole screen including system UI
+     * is covered.
+     */
+    val isAccessibilityEnabled: StateFlow<Boolean> = accessibilityService.map { it != null }
+        .stateIn(scope, SharingStarted.Eagerly, false)
+
+    internal fun attachAccessibilityService(service: Context) {
+        accessibilityService.value = service
+    }
+
+    internal fun detachAccessibilityService(service: Context) {
+        if (accessibilityService.value === service) {
+            // The window belongs to the service, it's gone with it
+            overlay = null
+            overlayContext = null
+            accessibilityService.value = null
+        }
+    }
 
     private var overlay: View? = null
+    /**
+     * Context whose window manager the current overlay was added with.
+     */
+    private var overlayContext: Context? = null
     private var started = false
 
     fun canDrawOverlays(): Boolean = Settings.canDrawOverlays(context)
@@ -74,10 +110,10 @@ class NightScreen internal constructor(
         }, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
 
         scope.launch {
-            combine(store.data, isActive, permission) { data, active, permitted ->
-                Triple(data, active, permitted)
-            }.collectLatest { (data, active, permitted) ->
-                if (active && permitted) show(data) else hide()
+            combine(store.data, isActive, permission, accessibilityService) { data, active, permitted, a11y ->
+                Triple(data, active, a11y ?: if (permitted) context else null)
+            }.collectLatest { (data, active, target) ->
+                if (active && target != null) show(data, target) else hide()
                 // Wake up exactly at the next schedule change (TIME_TICK only covers whole minutes
                 // while the screen is on).
                 val wait = data.nextTransition(System.currentTimeMillis()) - System.currentTimeMillis()
@@ -133,9 +169,13 @@ class NightScreen internal constructor(
         refresh()
     }
 
-    private fun show(data: NightScreenData) {
-        val (color, alpha) = overlayColor(data)
-        val windowManager = context.getSystemService(WindowManager::class.java)
+    private fun show(data: NightScreenData, target: Context) {
+        val isAccessibility = target !== context
+        val (color, alpha) = overlayColor(data, if (isAccessibility) MaxAccessibilityAlpha else MaxAlpha)
+        // Switching between app and accessibility overlay: replace the window
+        if (overlay != null && overlayContext !== target) removeNow()
+
+        val windowManager = target.getSystemService(WindowManager::class.java)
         val existing = overlay
         if (existing != null) {
             existing.setBackgroundColor(color)
@@ -153,7 +193,8 @@ class NightScreen internal constructor(
         val params = WindowManager.LayoutParams(
             size,
             size,
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            if (isAccessibility) WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
+            else WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
@@ -176,25 +217,40 @@ class NightScreen internal constructor(
             }
             title = "Night screen"
         }
-        val view = View(context).apply {
+        val view = View(target).apply {
             setBackgroundColor(color)
             this.alpha = 0f
         }
         try {
             windowManager.addView(view, params)
             overlay = view
+            overlayContext = target
             view.animate().alpha(1f).setDuration(600).start()
         } catch (e: Exception) {
             Log.e("NightScreen", "Failed to add overlay", e)
         }
     }
 
+    private fun removeNow() {
+        val view = overlay ?: return
+        val owner = overlayContext ?: context
+        overlay = null
+        overlayContext = null
+        try {
+            owner.getSystemService(WindowManager::class.java).removeView(view)
+        } catch (e: Exception) {
+            Log.e("NightScreen", "Failed to remove overlay", e)
+        }
+    }
+
     private fun hide() {
         val view = overlay ?: return
+        val owner = overlayContext ?: context
         overlay = null
+        overlayContext = null
         view.animate().alpha(0f).setDuration(400).withEndAction {
             try {
-                context.getSystemService(WindowManager::class.java).removeView(view)
+                owner.getSystemService(WindowManager::class.java).removeView(view)
             } catch (e: Exception) {
                 Log.e("NightScreen", "Failed to remove overlay", e)
             }
@@ -209,13 +265,19 @@ class NightScreen internal constructor(
         private const val MaxAlpha = 0.8f
 
         /**
+         * Accessibility overlays are trusted, they don't have the touch limitation. Still leave
+         * a bit of the screen visible so that it's never completely black.
+         */
+        private const val MaxAccessibilityAlpha = 0.95f
+
+        /**
          * Color and window alpha of the overlay. The overlay is blended over the screen, so the
          * screen is darkened by `alpha` and tinted by `color * alpha`.
          */
-        fun overlayColor(data: NightScreenData): Pair<Int, Float> {
-            val dimAlpha = data.dim * MaxAlpha
+        fun overlayColor(data: NightScreenData, maxAlpha: Float = MaxAlpha): Pair<Int, Float> {
+            val dimAlpha = data.dim * maxAlpha
             val tintAlpha = data.warmth * 0.3f
-            val alpha = min(MaxAlpha, dimAlpha + tintAlpha * (1f - dimAlpha))
+            val alpha = min(maxAlpha, dimAlpha + tintAlpha * (1f - dimAlpha))
             if (alpha <= 0f) return Color.TRANSPARENT to 0f
             // Share of the overlay that is amber instead of black
             val warmShare = (tintAlpha * (1f - dimAlpha) / alpha).coerceIn(0f, 1f)

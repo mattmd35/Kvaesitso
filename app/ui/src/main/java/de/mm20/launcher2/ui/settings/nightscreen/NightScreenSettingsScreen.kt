@@ -54,6 +54,7 @@ class NightScreenSettingsScreenVM : ViewModel(), KoinComponent {
     val data = nightScreen.data.stateIn(viewModelScope, SharingStarted.Eagerly, null)
     val isActive = nightScreen.isActive
     val hasPermission = nightScreen.hasPermission
+    val isAccessibilityEnabled = nightScreen.isAccessibilityEnabled
 
     fun refresh() = nightScreen.refresh()
     fun setActive(active: Boolean) = viewModelScope.launch { nightScreen.setActive(active) }
@@ -70,6 +71,7 @@ fun NightScreenSettingsScreen() {
     val data by viewModel.data.collectAsStateWithLifecycle()
     val isActive by viewModel.isActive.collectAsStateWithLifecycle()
     val hasPermission by viewModel.hasPermission.collectAsStateWithLifecycle()
+    val isAccessibilityEnabled by viewModel.isAccessibilityEnabled.collectAsStateWithLifecycle()
 
     // Permission might have been granted in the system settings
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
@@ -102,6 +104,24 @@ fun NightScreenSettingsScreen() {
                 enabled = hasPermission,
                 onValueChanged = { viewModel.setActive(it) },
             )
+        }
+        item {
+            PreferenceCategory {
+                Preference(
+                    title = stringResource(R.string.night_screen_accessibility),
+                    summary = stringResource(
+                        if (isAccessibilityEnabled) R.string.night_screen_accessibility_on
+                        else R.string.night_screen_accessibility_off
+                    ),
+                    icon = R.drawable.visibility_off_24px,
+                    onClick = {
+                        context.startActivity(
+                            Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                    },
+                )
+            }
         }
         item {
             PreferenceCategory(stringResource(R.string.night_screen_category_look)) {
@@ -171,6 +191,16 @@ fun NightScreenSettingsScreen() {
                     )
                 }
             }
+        }
+        if (!isAccessibilityEnabled) item {
+            Text(
+                stringResource(R.string.night_screen_accessibility_restricted),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, top = 16.dp),
+            )
         }
         item {
             Text(
