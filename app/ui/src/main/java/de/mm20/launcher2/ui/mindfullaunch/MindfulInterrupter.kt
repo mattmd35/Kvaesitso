@@ -200,6 +200,7 @@ object MindfulInterrupter : KoinComponent {
             null
         }
         val phrase = MindfulText.phrase(context, spicy)
+        val instead = InsteadContent.load(context, mindfulLaunch.data.value, packageName)
         val today = mindfulLaunch.foregroundTimeToday(packageName)
 
         val owner = OverlayOwner().also { it.start() }
@@ -210,6 +211,11 @@ object MindfulInterrupter : KoinComponent {
                 LauncherTheme {
                     InterruptionScreen(
                         phrase = phrase,
+                        instead = instead,
+                        onOpenInstead = {
+                            endSession()
+                            InsteadContent.launch(context, it)
+                        },
                         icon = icon,
                         waitSeconds = waitSeconds,
                         session = context.getString(
@@ -290,6 +296,8 @@ object MindfulInterrupter : KoinComponent {
 @androidx.compose.runtime.Composable
 private fun InterruptionScreen(
     phrase: String,
+    instead: InsteadContent?,
+    onOpenInstead: (String) -> Unit,
     icon: ImageBitmap?,
     waitSeconds: Int,
     session: String,
@@ -363,7 +371,13 @@ private fun InterruptionScreen(
                     textAlign = TextAlign.Center,
                 )
             }
-            Spacer(Modifier.height(48.dp))
+            if (instead != null) {
+                Spacer(Modifier.height(24.dp))
+                InsteadSection(instead, onOpenApp = onOpenInstead)
+                Spacer(Modifier.height(24.dp))
+            } else {
+                Spacer(Modifier.height(48.dp))
+            }
             Button(onClick = onClose, modifier = Modifier.fillMaxWidth(0.7f)) {
                 Text(stringResource(R.string.mindful_launch_close_app))
             }

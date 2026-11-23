@@ -1340,4 +1340,29 @@
     <string name="mindful_launch_unlock_typing_sentence">I really want to open %1$s right now</string>
     <string name="mindful_launch_grace">Skip the pause if used in the last</string>
     <string name="mindful_launch_grace_off">Always pause</string>
+    <string name="mindful_instead_title">Instead, you could…</string>
+    <string name="mindful_instead_category">What instead</string>
+    <string name="mindful_instead_enabled">Suggest something better</string>
+    <string name="mindful_instead_enabled_summary">Shows an idea and your alternative apps on the pause and reminder screens. Tap the idea for another one.</string>
+    <string name="mindful_instead_add_app">Add an alternative app</string>
+    <string name="mindful_instead_add_task">Add your own idea</string>
+    <string name="mindful_instead_add_task_summary">Used together with the built-in ideas</string>
+    <string name="mindful_instead_task_hint">e.g. Practice guitar for 10 minutes</string>
+    <string-array name="mindful_instead_defaults">
+        <item>Drink a glass of water</item>
+        <item>Read 10 pages of a book</item>
+        <item>Text a friend you haven\'t talked to in a while</item>
+        <item>Do 15 push-ups</item>
+        <item>Go for a 10-minute walk</item>
+        <item>Tidy up one small thing</item>
+        <item>Stretch for two minutes</item>
+        <item>Look out the window for a minute</item>
+        <item>Write down what you actually wanted to do</item>
+        <item>Make yourself a cup of tea</item>
+        <item>Do the dishes</item>
+        <item>Step outside and take five deep breaths</item>
+        <item>Put on an album and just listen</item>
+        <item>Call someone instead of scrolling</item>
+        <item>Go to bed, seriously</item>
+    </string-array>
 </resources>

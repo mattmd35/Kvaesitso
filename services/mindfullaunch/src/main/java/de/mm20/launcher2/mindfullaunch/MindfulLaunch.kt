@@ -137,6 +137,31 @@ class MindfulLaunch internal constructor(
         scope.launch { store.update { it.copy(nfcUnlock = enabled) } }
     }
 
+    fun setInsteadEnabled(enabled: Boolean) {
+        scope.launch { store.update { it.copy(insteadEnabled = enabled) } }
+    }
+
+    fun addInsteadTask(task: String) {
+        val t = task.trim()
+        if (t.isEmpty()) return
+        scope.launch { store.update { it.copy(insteadTasks = (it.insteadTasks + t).distinct()) } }
+    }
+
+    fun removeInsteadTask(task: String) {
+        scope.launch { store.update { it.copy(insteadTasks = it.insteadTasks - task) } }
+    }
+
+    fun setInsteadApp(packageName: String, added: Boolean) {
+        scope.launch {
+            store.update {
+                it.copy(
+                    insteadApps = if (added) (it.insteadApps + packageName).distinct()
+                    else it.insteadApps - packageName
+                )
+            }
+        }
+    }
+
     fun setUnlockMath(enabled: Boolean) {
         scope.launch { store.update { it.copy(unlockMath = enabled) } }
     }

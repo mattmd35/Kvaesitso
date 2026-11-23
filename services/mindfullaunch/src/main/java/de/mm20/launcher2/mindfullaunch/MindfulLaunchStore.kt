@@ -59,6 +59,18 @@ data class MindfulLaunchData(
      * Skip the pause if the app was in use within this many seconds (0 = always pause).
      */
     val graceSeconds: Int = 120,
+    /**
+     * Show "Instead, you could…" with a suggestion and alternative apps.
+     */
+    val insteadEnabled: Boolean = true,
+    /**
+     * The user's own suggestions, used together with the built-in ones.
+     */
+    val insteadTasks: List<String> = emptyList(),
+    /**
+     * Package names of apps offered as better alternatives.
+     */
+    val insteadApps: List<String> = emptyList(),
 )
 
 class MindfulLaunchStore internal constructor(

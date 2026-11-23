@@ -78,6 +78,10 @@ class MindfulLaunchSettingsScreenVM : ViewModel(), KoinComponent {
     fun setInterruptions(enabled: Boolean? = null, minutes: Int? = null) =
         mindfulLaunch.setInterruptions(enabled, minutes)
     fun setSpicy(spicy: Boolean) = mindfulLaunch.setSpicy(spicy)
+    fun setInsteadEnabled(enabled: Boolean) = mindfulLaunch.setInsteadEnabled(enabled)
+    fun addInsteadTask(task: String) = mindfulLaunch.addInsteadTask(task)
+    fun removeInsteadTask(task: String) = mindfulLaunch.removeInsteadTask(task)
+    fun setInsteadApp(packageName: String, added: Boolean) = mindfulLaunch.setInsteadApp(packageName, added)
     fun setGraceSeconds(seconds: Int) = mindfulLaunch.setGraceSeconds(seconds)
     fun setUnlockMath(enabled: Boolean) = mindfulLaunch.setUnlockMath(enabled)
     fun setUnlockTyping(enabled: Boolean) = mindfulLaunch.setUnlockTyping(enabled)
@@ -99,6 +103,8 @@ fun MindfulLaunchSettingsScreen() {
     val viewModel: MindfulLaunchSettingsScreenVM = viewModel()
     val data by viewModel.data.collectAsStateWithLifecycle()
     var showPicker by rememberSaveable { mutableStateOf(false) }
+    var showInsteadPicker by rememberSaveable { mutableStateOf(false) }
+    var showTaskDialog by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
     val nfcAdapter = remember { NfcAdapter.getDefaultAdapter(context) }
 
@@ -216,6 +222,43 @@ fun MindfulLaunchSettingsScreen() {
             }
         }
         item {
+            PreferenceCategory(stringResource(R.string.mindful_instead_category)) {
+                SwitchPreference(
+                    title = stringResource(R.string.mindful_instead_enabled),
+                    summary = stringResource(R.string.mindful_instead_enabled_summary),
+                    icon = R.drawable.lightbulb_24px,
+                    value = data.insteadEnabled,
+                    onValueChanged = { viewModel.setInsteadEnabled(it) },
+                )
+                for (pkg in data.insteadApps) {
+                    InsteadAppPreference(viewModel, pkg)
+                }
+                Preference(
+                    title = stringResource(R.string.mindful_instead_add_app),
+                    icon = R.drawable.add_24px,
+                    enabled = data.insteadEnabled,
+                    onClick = { showInsteadPicker = true },
+                )
+                for (task in data.insteadTasks) {
+                    Preference(
+                        title = { Text(task) },
+                        controls = {
+                            IconButton(onClick = { viewModel.removeInsteadTask(task) }) {
+                                Icon(painterResource(R.drawable.close_24px), null)
+                            }
+                        },
+                    )
+                }
+                Preference(
+                    title = stringResource(R.string.mindful_instead_add_task),
+                    summary = stringResource(R.string.mindful_instead_add_task_summary),
+                    icon = R.drawable.add_24px,
+                    enabled = data.insteadEnabled,
+                    onClick = { showTaskDialog = true },
+                )
+            }
+        }
+        item {
             PreferenceCategory(stringResource(R.string.mindful_launch_category_tone)) {
                 SwitchPreference(
                     title = stringResource(R.string.mindful_launch_spicy),
@@ -284,6 +327,57 @@ fun MindfulLaunchSettingsScreen() {
         }
     }
 
+    if (showTaskDialog) {
+        var text by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showTaskDialog = false },
+            title = { Text(stringResource(R.string.mindful_instead_add_task)) },
+            text = {
+                androidx.compose.material3.OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    singleLine = true,
+                    placeholder = { Text(stringResource(R.string.mindful_instead_task_hint)) },
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = text.isNotBlank(),
+                    onClick = {
+                        viewModel.addInsteadTask(text)
+                        showTaskDialog = false
+                    },
+                ) { Text(stringResource(android.R.string.ok)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTaskDialog = false }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+            },
+        )
+    }
+
+    DismissableBottomSheet(
+        expanded = showInsteadPicker,
+        onDismissRequest = { showInsteadPicker = false },
+    ) {
+        SearchablePicker(
+            value = null,
+            onValueChanged = { picked ->
+                picked?.let { MindfulLaunchGate.packageOf(it) }?.let {
+                    viewModel.setInsteadApp(it, true)
+                }
+                showInsteadPicker = false
+            },
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+            ),
+        )
+    }
+
     DismissableBottomSheet(
         expanded = showPicker,
         onDismissRequest = { showPicker = false },
@@ -328,6 +422,28 @@ private fun WatchedAppPreference(
         icon = { ShapedLauncherIcon(size = iconSize, icon = { icon }) },
         controls = {
             IconButton(onClick = { viewModel.setWatched(packageName, false) }) {
+                Icon(painterResource(R.drawable.close_24px), null)
+            }
+        },
+    )
+}
+
+@Composable
+private fun InsteadAppPreference(
+    viewModel: MindfulLaunchSettingsScreenVM,
+    packageName: String,
+) {
+    val app by remember(packageName) { viewModel.getApp(packageName) }
+        .collectAsStateWithLifecycle(null)
+    val iconSize = 32.dp
+    val iconPx = iconSize.toPixels().toInt()
+    val icon by remember(app) { viewModel.getIcon(app, iconPx) }
+        .collectAsStateWithLifecycle(null)
+    Preference(
+        title = { Text(app?.let { it.labelOverride ?: it.label } ?: packageName) },
+        icon = { ShapedLauncherIcon(size = iconSize, icon = { icon }) },
+        controls = {
+            IconButton(onClick = { viewModel.setInsteadApp(packageName, false) }) {
                 Icon(painterResource(R.drawable.close_24px), null)
             }
         },

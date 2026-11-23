@@ -108,6 +108,7 @@ class MindfulLaunchActivity : BaseActivity() {
         val opensToday = mindfulLaunch.opensToday(packageName)
         val timeToday = mindfulLaunch.foregroundTimeToday(packageName)
         val phrase = MindfulText.phrase(this, data?.spicy == true)
+        val instead = InsteadContent.load(this, data, packageName)
 
         setContent {
             LauncherTheme {
@@ -128,6 +129,8 @@ class MindfulLaunchActivity : BaseActivity() {
                         nfcGate = nfcGate,
                         unlockMath = data?.unlockMath == true,
                         unlockTyping = data?.unlockTyping == true,
+                        instead = instead,
+                        onOpenInstead = { openInstead(it) },
                         icon = { ShapedLauncherIcon(size = iconSize, icon = { icon }) },
                         onOpen = { open() },
                         onSkip = { skip() },
@@ -185,6 +188,15 @@ class MindfulLaunchActivity : BaseActivity() {
         overridePendingTransition(0, 0)
     }
 
+    private fun openInstead(other: String) {
+        val packageName = packageName ?: return
+        if (decided) return
+        decided = true
+        mindfulLaunch.recordSkip(packageName)
+        InsteadContent.launch(this, other)
+        finish()
+    }
+
     private fun skip() {
         val packageName = packageName ?: return finish()
         if (decided) return
@@ -211,6 +223,8 @@ private fun PauseScreen(
     nfcGate: NfcGate,
     unlockMath: Boolean,
     unlockTyping: Boolean,
+    instead: InsteadContent?,
+    onOpenInstead: (String) -> Unit,
     icon: @Composable () -> Unit,
     onOpen: () -> Unit,
     onSkip: () -> Unit,
@@ -304,7 +318,13 @@ private fun PauseScreen(
                     textAlign = TextAlign.Center,
                 )
             }
-            Spacer(Modifier.height(48.dp))
+            if (instead != null) {
+                Spacer(Modifier.height(24.dp))
+                InsteadSection(instead, onOpenApp = onOpenInstead)
+                Spacer(Modifier.height(24.dp))
+            } else {
+                Spacer(Modifier.height(48.dp))
+            }
             // "Not now" is the prominent action; opening is available but quieter.
             Button(
                 onClick = onSkip,
