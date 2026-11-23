@@ -40,6 +40,16 @@ enum class WallpaperSchedule {
 }
 
 @Serializable
+enum class WallpaperTone {
+    None,
+    Warm,
+    Cool,
+    Mono,
+    Sepia,
+    Faded,
+}
+
+@Serializable
 data class WallpaperCarouselData(
     val enabled: Boolean = false,
     val schedule: WallpaperSchedule = WallpaperSchedule.Interval,
@@ -59,7 +69,19 @@ data class WallpaperCarouselData(
      */
     val wallpapers: List<String> = emptyList(),
     val currentIndex: Int = -1,
-)
+    /**
+     * Strength of the dark corners, 0..1. Applied when a wallpaper is set; originals are kept.
+     */
+    val vignette: Float = 0f,
+    /**
+     * How much the whole image is darkened, 0..1.
+     */
+    val dim: Float = 0f,
+    val tone: WallpaperTone = WallpaperTone.None,
+) {
+    val hasFilters: Boolean
+        get() = vignette > 0f || dim > 0f || tone != WallpaperTone.None
+}
 
 /**
  * Persists the wallpaper carousel settings to `wallpaper_carousel.json`. The images are stored

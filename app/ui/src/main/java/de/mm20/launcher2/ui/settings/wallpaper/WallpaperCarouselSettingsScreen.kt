@@ -58,6 +58,9 @@ import de.mm20.launcher2.ui.component.preferences.PreferenceCategory
 import de.mm20.launcher2.ui.component.preferences.PreferenceScreen
 import de.mm20.launcher2.ui.component.preferences.SwitchPreference
 import de.mm20.launcher2.wallpaper.WallpaperTarget
+import de.mm20.launcher2.wallpaper.WallpaperTone
+import de.mm20.launcher2.ui.component.preferences.SliderPreference
+import kotlin.math.roundToInt
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -147,6 +150,35 @@ fun WallpaperCarouselSettingsScreen() {
                     icon = R.drawable.skip_next_24px,
                     enabled = data.wallpapers.isNotEmpty(),
                     onClick = { viewModel.next() },
+                )
+            }
+        }
+        item {
+            PreferenceCategory(stringResource(R.string.wallpaper_carousel_category_look)) {
+                SliderPreference(
+                    title = stringResource(R.string.wallpaper_carousel_vignette),
+                    value = data.vignette,
+                    onValueChanged = { viewModel.setVignette(it) },
+                    label = { Text("${(it * 100).roundToInt()} %") },
+                )
+                SliderPreference(
+                    title = stringResource(R.string.wallpaper_carousel_dim),
+                    value = data.dim,
+                    onValueChanged = { viewModel.setDim(it) },
+                    label = { Text("${(it * 100).roundToInt()} %") },
+                )
+                ListPreference(
+                    title = stringResource(R.string.wallpaper_carousel_tone),
+                    items = listOf(
+                        stringResource(R.string.wallpaper_carousel_tone_none) to WallpaperTone.None,
+                        stringResource(R.string.wallpaper_carousel_tone_warm) to WallpaperTone.Warm,
+                        stringResource(R.string.wallpaper_carousel_tone_cool) to WallpaperTone.Cool,
+                        stringResource(R.string.wallpaper_carousel_tone_mono) to WallpaperTone.Mono,
+                        stringResource(R.string.wallpaper_carousel_tone_sepia) to WallpaperTone.Sepia,
+                        stringResource(R.string.wallpaper_carousel_tone_faded) to WallpaperTone.Faded,
+                    ),
+                    value = data.tone,
+                    onValueChanged = { viewModel.setTone(it) },
                 )
             }
         }

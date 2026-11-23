@@ -137,21 +137,44 @@ class WallpaperCarousel internal constructor(
     private suspend fun show(index: Int): Boolean = mutex.withLock {
         val data = store.data.first()
         val name = data.wallpapers.getOrNull(index) ?: return false
-        val success = withContext(Dispatchers.IO) { apply(getFile(name), data.target) }
+        val success = withContext(Dispatchers.IO) { apply(getFile(name), data) }
         if (success) store.update { it.copy(currentIndex = index) }
         success
     }
 
-    private fun apply(file: File, target: WallpaperTarget): Boolean {
+    suspend fun setFilters(
+        vignette: Float? = null,
+        dim: Float? = null,
+        tone: WallpaperTone? = null,
+    ) {
+        val data = update {
+            it.copy(
+                vignette = (vignette ?: it.vignette).coerceIn(0f, 1f),
+                dim = (dim ?: it.dim).coerceIn(0f, 1f),
+                tone = tone ?: it.tone,
+            )
+        }
+        // Re-apply the current wallpaper so the change is visible right away
+        if (data.enabled && data.currentIndex in data.wallpapers.indices) show(data.currentIndex)
+    }
+
+    private fun apply(file: File, data: WallpaperCarouselData): Boolean {
         if (!file.exists()) return false
-        val flags = when (target) {
+        val flags = when (data.target) {
             WallpaperTarget.HomeAndLock -> WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK
             WallpaperTarget.Home -> WallpaperManager.FLAG_SYSTEM
             WallpaperTarget.Lock -> WallpaperManager.FLAG_LOCK
         }
         return try {
-            file.inputStream().use {
-                WallpaperManager.getInstance(context).setStream(it, null, true, flags)
+            val wm = WallpaperManager.getInstance(context)
+            if (data.hasFilters) {
+                val source = BitmapFactory.decodeFile(file.absolutePath) ?: return false
+                val filtered = WallpaperFilters.apply(source, data)
+                source.recycle()
+                wm.setBitmap(filtered, null, true, flags)
+                filtered.recycle()
+            } else {
+                file.inputStream().use { wm.setStream(it, null, true, flags) }
             }
             true
         } catch (e: Exception) {

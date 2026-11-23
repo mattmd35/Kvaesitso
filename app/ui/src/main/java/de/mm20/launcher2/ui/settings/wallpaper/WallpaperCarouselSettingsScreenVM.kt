@@ -47,6 +47,9 @@ class WallpaperCarouselSettingsScreenVM : ViewModel(), KoinComponent {
     fun setTarget(target: WallpaperTarget) = viewModelScope.launch { carousel.setTarget(target) }
     fun setShuffle(shuffle: Boolean) = viewModelScope.launch { carousel.setShuffle(shuffle) }
     fun setIncludeInBackup(include: Boolean) = viewModelScope.launch { carousel.setIncludeInBackup(include) }
+    fun setVignette(value: Float) = viewModelScope.launch { carousel.setFilters(vignette = value) }
+    fun setDim(value: Float) = viewModelScope.launch { carousel.setFilters(dim = value) }
+    fun setTone(tone: de.mm20.launcher2.wallpaper.WallpaperTone) = viewModelScope.launch { carousel.setFilters(tone = tone) }
 
     val WallpaperCarouselData.currentWallpaper: String?
         get() = wallpapers.getOrNull(currentIndex)

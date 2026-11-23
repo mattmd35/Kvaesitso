@@ -1303,4 +1303,14 @@
         <item>Congrats, you\'ve wasted another chunk of your life.</item>
         <item>Get your shit together and close this.</item>
     </string-array>
+    <string name="wallpaper_carousel_category_look">Look</string>
+    <string name="wallpaper_carousel_vignette">Vignette (dark corners)</string>
+    <string name="wallpaper_carousel_dim">Darken</string>
+    <string name="wallpaper_carousel_tone">Tone</string>
+    <string name="wallpaper_carousel_tone_none">Original</string>
+    <string name="wallpaper_carousel_tone_warm">Warm</string>
+    <string name="wallpaper_carousel_tone_cool">Cool</string>
+    <string name="wallpaper_carousel_tone_mono">Black &amp; white</string>
+    <string name="wallpaper_carousel_tone_sepia">Sepia</string>
+    <string name="wallpaper_carousel_tone_faded">Faded</string>
 </resources>
