@@ -231,6 +231,17 @@
     <string name="widget_name_music">Media</string>
     <string name="widget_name_apps">Apps</string>
     <string name="widget_name_notes">Note</string>
+    <string name="widget_name_ir_remote">IR remote</string>
+    <string name="ir_remote_no_emitter">This device doesn\'t have an infrared blaster.</string>
+    <string name="ir_remote_layout">Remote</string>
+    <string name="ir_remote_layout_24">24 keys (RGB LED strip)</string>
+    <string name="ir_remote_layout_44">44 keys (RGB LED strip)</string>
+    <string name="ir_remote_layout_summary">Pick the layout that matches the remote that came with your LEDs. Hold a button to repeat it.</string>
+    <string name="ir_remote_on">On</string>
+    <string name="ir_remote_off">Off</string>
+    <string name="ir_remote_play_pause">Play / pause</string>
+    <string name="ir_remote_brighter">Brighter</string>
+    <string name="ir_remote_dimmer">Dimmer</string>
     <string name="widget_name_unknown">Unknown</string>
     <string name="widget_add_widget">Add widget</string>
     <string name="widget_removed">Widget removed</string>

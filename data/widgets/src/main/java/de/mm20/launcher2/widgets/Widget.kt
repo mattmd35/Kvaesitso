@@ -67,6 +67,12 @@ sealed class Widget {
                             ?: NotesWidgetConfig()
                     NotesWidget(entity.id, config)
                 }
+                IrRemoteWidget.Type -> {
+                    val config: IrRemoteWidgetConfig =
+                        Json.decodeFromStringOrNull(entity.config?.takeIf { it.isNotBlank() })
+                            ?: IrRemoteWidgetConfig()
+                    IrRemoteWidget(entity.id, config)
+                }
 
                 else -> null
             }

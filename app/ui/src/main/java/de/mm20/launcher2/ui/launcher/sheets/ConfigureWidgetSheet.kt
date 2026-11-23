@@ -117,6 +117,7 @@ import de.mm20.launcher2.widgets.AppsWidget
 import de.mm20.launcher2.widgets.CalendarWidget
 import de.mm20.launcher2.widgets.MusicWidget
 import de.mm20.launcher2.widgets.NotesWidget
+import de.mm20.launcher2.widgets.IrRemoteWidget
 import de.mm20.launcher2.widgets.WeatherWidget
 import de.mm20.launcher2.widgets.Widget
 import kotlinx.collections.immutable.toImmutableList
@@ -152,6 +153,7 @@ fun ConfigureWidgetSheet(
                 is AppsWidget -> ConfigureFavoritesWidget(widget, onWidgetUpdated)
                 is MusicWidget -> ConfigureMusicWidget(widget, onWidgetUpdated)
                 is NotesWidget -> ConfigureNotesWidget(widget, onWidgetUpdated)
+                is IrRemoteWidget -> ConfigureIrRemoteWidget(widget, onWidgetUpdated)
             }
         }
 
@@ -688,6 +690,7 @@ fun ColumnScope.ConfigureAppWidget(
                     is CalendarWidget -> it.copy(id = widget.id)
                     is AppsWidget -> it.copy(id = widget.id)
                     is NotesWidget -> it.copy(id = widget.id)
+                    is IrRemoteWidget -> it.copy(id = widget.id)
                 }
                 onWidgetUpdated(updatedWidget)
                 replaceWidget = false
@@ -1104,4 +1107,30 @@ fun formatLinkedFileUri(uri: Uri?): String {
         return uri.lastPathSegment ?: ""
     }
     return uri.toString()
+}
+
+@Composable
+fun ColumnScope.ConfigureIrRemoteWidget(
+    widget: IrRemoteWidget,
+    onWidgetUpdated: (IrRemoteWidget) -> Unit,
+) {
+    de.mm20.launcher2.ui.component.preferences.PreferenceCategory {
+        de.mm20.launcher2.ui.component.preferences.ListPreference(
+            title = stringResource(R.string.ir_remote_layout),
+            items = listOf(
+                stringResource(R.string.ir_remote_layout_24) to de.mm20.launcher2.widgets.IrRemoteLayout.Rgb24,
+                stringResource(R.string.ir_remote_layout_44) to de.mm20.launcher2.widgets.IrRemoteLayout.Rgb44,
+            ),
+            value = widget.config.layout,
+            onValueChanged = {
+                onWidgetUpdated(widget.copy(config = widget.config.copy(layout = it)))
+            },
+        )
+    }
+    Text(
+        stringResource(R.string.ir_remote_layout_summary),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 12.dp, start = 4.dp, end = 4.dp),
+    )
 }
