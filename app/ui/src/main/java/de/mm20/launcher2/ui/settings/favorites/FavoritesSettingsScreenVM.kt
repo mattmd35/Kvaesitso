@@ -28,6 +28,12 @@ class FavoritesSettingsScreenVM: ViewModel(), KoinComponent {
         favoritesSettings.setFrequentlyUsedRows(frequentlyUsedRows)
     }
 
+    val showInDrawer = favoritesSettings.showInDrawer
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), null)
+    fun setShowInDrawer(showInDrawer: Boolean) {
+        favoritesSettings.setShowInDrawer(showInDrawer)
+    }
+
     val editButton = favoritesSettings.showEditButton
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), null)
     fun setEditButton(editButton: Boolean) {

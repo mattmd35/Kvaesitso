@@ -61,6 +61,19 @@ android {
             applicationIdSuffix = ".debug"
             isDebuggable = true
         }
+        /**
+         * Optimized build for personal use: as fast as a release build, but signed with the
+         * debug key and installed as `.debug`, so it updates the debug build in place and keeps
+         * its data.
+         */
+        create("fork") {
+            initWith(getByName("release"))
+            matchingFallbacks += "release"
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-fork"
+            signingConfig = signingConfigs.getByName("debug")
+            isDebuggable = false
+        }
         create("nightly") {
             initWith(getByName("release"))
             matchingFallbacks += "release"
@@ -165,6 +178,7 @@ dependencies {
     implementation(project(":services:plugins"))
     implementation(project(":core:devicepose"))
     implementation(project(":services:feed"))
+    implementation(project(":services:wallpaper"))
 
     // Uncomment this if you want annoying notifications in your debug builds
     //debugImplementation(libs.leakcanary)

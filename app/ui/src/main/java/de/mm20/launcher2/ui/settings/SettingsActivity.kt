@@ -94,6 +94,8 @@ import de.mm20.launcher2.ui.settings.hiddenitems.HiddenItemsSettingsRoute
 import de.mm20.launcher2.ui.settings.hiddenitems.HiddenItemsSettingsScreen
 import de.mm20.launcher2.ui.settings.homescreen.HomescreenSettingsRoute
 import de.mm20.launcher2.ui.settings.homescreen.HomescreenSettingsScreen
+import de.mm20.launcher2.ui.settings.wallpaper.WallpaperCarouselSettingsRoute
+import de.mm20.launcher2.ui.settings.wallpaper.WallpaperCarouselSettingsScreen
 import de.mm20.launcher2.ui.settings.icons.IconsSettingsRoute
 import de.mm20.launcher2.ui.settings.icons.IconsSettingsScreen
 import de.mm20.launcher2.ui.settings.integrations.IntegrationsSettingsRoute
@@ -185,6 +187,9 @@ class SettingsActivity : BaseActivity() {
             }
             entry<HomescreenSettingsRoute> {
                 HomescreenSettingsScreen()
+            }
+            entry<WallpaperCarouselSettingsRoute> {
+                WallpaperCarouselSettingsScreen()
             }
             entry<IconsSettingsRoute> {
                 IconsSettingsScreen()

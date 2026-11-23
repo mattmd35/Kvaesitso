@@ -40,6 +40,14 @@ fun FavoritesSettingsScreen() {
                         showEditSheet = true
                     }
                 )
+                val showInDrawer by viewModel.showInDrawer.collectAsState()
+                SwitchPreference(
+                    title = stringResource(R.string.preference_favorites_in_drawer),
+                    summary = stringResource(R.string.preference_favorites_in_drawer_summary),
+                    value = showInDrawer == true,
+                    onValueChanged = { viewModel.setShowInDrawer(it) },
+                    icon = R.drawable.star_24px,
+                )
             }
         }
         item {

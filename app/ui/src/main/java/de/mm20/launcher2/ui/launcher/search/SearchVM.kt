@@ -116,7 +116,8 @@ class SearchVM : ViewModel(), KoinComponent {
     val hiddenResultsButton = searchUiSettings.hiddenItemsButton
     val hiddenResults = mutableStateListOf<SavableSearchable>()
 
-    val favoritesEnabled = searchUiSettings.favorites
+    private val favoritesSettings: de.mm20.launcher2.preferences.search.FavoritesSettings by inject()
+    val favoritesEnabled = combine(searchUiSettings.favorites, favoritesSettings.showInDrawer) { a, b -> a && b }
     val hideFavorites = mutableStateOf(false)
 
     val allAppsEnabled = searchUiSettings.allApps

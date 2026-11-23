@@ -1143,4 +1143,34 @@
     <string name="app_drawer_folder_ungroup">Ungroup</string>
     <string name="app_drawer_folder_remove_app">Remove from folder</string>
     <string name="app_drawer_folder_arrange_hint">Drag to reorder. Tap ✕ to move an app out of the folder.</string>
+    <string name="preference_favorites_in_drawer">Show in app drawer</string>
+    <string name="preference_favorites_in_drawer_summary">Show favorites and tags above the app list. Edit them from the ⋮ menu in the search bar.</string>
+    <!-- Wallpaper carousel -->
+    <string name="preference_screen_wallpaper_carousel">Wallpaper carousel</string>
+    <string name="preference_screen_wallpaper_carousel_summary">Switch between your own wallpapers automatically</string>
+    <string name="wallpaper_carousel_enable">Change wallpaper automatically</string>
+    <string name="wallpaper_carousel_interval">Change every</string>
+    <string name="wallpaper_carousel_interval_15m">15 minutes</string>
+    <string name="wallpaper_carousel_interval_30m">30 minutes</string>
+    <string name="wallpaper_carousel_interval_1h">Hour</string>
+    <string name="wallpaper_carousel_interval_3h">3 hours</string>
+    <string name="wallpaper_carousel_interval_6h">6 hours</string>
+    <string name="wallpaper_carousel_interval_12h">12 hours</string>
+    <string name="wallpaper_carousel_interval_1d">Day</string>
+    <string name="wallpaper_carousel_target">Apply to</string>
+    <string name="wallpaper_carousel_target_both">Home and lock screen</string>
+    <string name="wallpaper_carousel_target_home">Home screen</string>
+    <string name="wallpaper_carousel_target_lock">Lock screen</string>
+    <string name="wallpaper_carousel_shuffle">Shuffle</string>
+    <string name="wallpaper_carousel_shuffle_summary">Pick the next wallpaper at random</string>
+    <string name="wallpaper_carousel_backup">Include images in backups</string>
+    <string name="wallpaper_carousel_backup_summary">Makes backups larger</string>
+    <string name="wallpaper_carousel_next">Next wallpaper now</string>
+    <string name="wallpaper_carousel_add">Add</string>
+    <string name="wallpaper_carousel_remove">Remove</string>
+    <string name="wallpaper_carousel_empty">Add some images to get started. Tap an image to set it as wallpaper right away.</string>
+    <plurals name="wallpaper_carousel_count">
+        <item quantity="one">%1$d wallpaper</item>
+        <item quantity="other">%1$d wallpapers</item>
+    </plurals>
 </resources>

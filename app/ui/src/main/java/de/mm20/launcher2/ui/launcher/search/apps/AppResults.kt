@@ -1,5 +1,9 @@
 package de.mm20.launcher2.ui.launcher.search.apps
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.VectorConverter
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -7,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
@@ -23,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,9 +37,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
+import kotlin.math.roundToInt
 import de.mm20.launcher2.profiles.Profile
 import de.mm20.launcher2.search.Application
 import de.mm20.launcher2.ui.R
@@ -266,6 +277,8 @@ fun LazyListScope.AppResults(
             reverse = reverse,
         )
     } else if (drawerItems != null) {
+        val indices = HashMap<String, Int>(drawerItems.size)
+        drawerItems.forEachIndexed { i, item -> indices[item.key] = i }
         GridResults(
             key = "apps",
             items = if (isProfileLocked) emptyList() else drawerItems,
@@ -273,6 +286,9 @@ fun LazyListScope.AppResults(
             itemContent = { item ->
                 DrawerTile(
                     item = item,
+                    index = indices[item.key] ?: 0,
+                    columns = columns,
+                    reverse = reverse,
                     isRearranging = isRearranging,
                     dragState = dragState,
                     highlight = item is DrawerItem.App && item.app.key == highlightedItem?.key,
@@ -304,6 +320,9 @@ fun LazyListScope.AppResults(
 @Composable
 private fun DrawerTile(
     item: DrawerItem,
+    index: Int,
+    columns: Int,
+    reverse: Boolean,
     isRearranging: Boolean,
     dragState: DrawerDragState?,
     highlight: Boolean,
@@ -311,9 +330,37 @@ private fun DrawerTile(
 ) {
     val isDragged = dragState?.draggedKey == item.key
     val isMergeTarget = dragState?.mergeTargetKey == item.key
+
+    // Slide to the new position when the order changes while rearranging. Tiles that move to
+    // another row are new composables, so the previous position comes from the drag state.
+    val slideOffset = remember { Animatable(IntOffset.Zero, IntOffset.VectorConverter) }
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    LaunchedEffect(item.key, index) {
+        val previous = dragState?.lastIndices?.put(item.key, index)
+        val cell = dragState?.cellSize
+        if (!isRearranging || previous == null || previous == index || cell == null || cell.width == 0f) {
+            slideOffset.snapTo(IntOffset.Zero)
+            return@LaunchedEffect
+        }
+        val dCol = previous % columns - index % columns
+        val dRow = previous / columns - index / columns
+        slideOffset.snapTo(
+            IntOffset(
+                (dCol * cell.width * if (isRtl) -1 else 1).roundToInt(),
+                (dRow * cell.height * if (reverse) -1 else 1).roundToInt(),
+            )
+        )
+        slideOffset.animateTo(
+            IntOffset.Zero,
+            spring(stiffness = Spring.StiffnessMediumLow, visibilityThreshold = IntOffset(1, 1))
+        )
+    }
+
     Box(
         modifier = Modifier
             .drawerDragTile(dragState, item.key)
+            .offset { slideOffset.value }
+            .zIndex(if (slideOffset.isRunning) 1f else 0f)
             // The dragged tile is drawn as a floating copy, keep its slot empty
             .graphicsLayer { alpha = if (isDragged) 0f else 1f }
             .wiggle(isRearranging && !isDragged, item.key)

@@ -551,8 +551,9 @@ private fun DraggedDrawerTile(
             .offset { (dragState.draggedTilePosition - dragState.containerOffset).round() }
             .size(with(density) { size.width.toDp() }, with(density) { size.height.toDp() })
             .graphicsLayer {
-                scaleX = 1.1f
-                scaleY = 1.1f
+                scaleX = dragState.draggedTileScale
+                scaleY = dragState.draggedTileScale
+                alpha = dragState.draggedTileAlpha
             }
     ) {
         when (item) {

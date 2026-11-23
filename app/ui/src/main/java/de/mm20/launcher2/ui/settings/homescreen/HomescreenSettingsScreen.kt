@@ -49,6 +49,8 @@ import de.mm20.launcher2.ui.component.SearchBarLevel
 import de.mm20.launcher2.ui.component.preferences.ListPreference
 import de.mm20.launcher2.ui.component.preferences.Preference
 import de.mm20.launcher2.ui.component.preferences.PreferenceCategory
+import de.mm20.launcher2.ui.locals.LocalBackStack
+import de.mm20.launcher2.ui.settings.wallpaper.WallpaperCarouselSettingsRoute
 import de.mm20.launcher2.ui.component.preferences.PreferenceScreen
 import de.mm20.launcher2.ui.component.preferences.SliderPreference
 import de.mm20.launcher2.ui.component.preferences.SwitchPreference
@@ -95,6 +97,17 @@ fun HomescreenSettingsScreen() {
                     onValueChanged = {
                         viewModel.setFixedRotation(it)
                     },
+                )
+            }
+        }
+        item {
+            val backStack = LocalBackStack.current
+            PreferenceCategory {
+                Preference(
+                    title = stringResource(R.string.preference_screen_wallpaper_carousel),
+                    summary = stringResource(R.string.preference_screen_wallpaper_carousel_summary),
+                    icon = R.drawable.wallpaper_24px,
+                    onClick = { backStack.add(WallpaperCarouselSettingsRoute) },
                 )
             }
         }

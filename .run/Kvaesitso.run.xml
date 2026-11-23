@@ -1,12 +1,14 @@
 <component name="ProjectRunConfigurationManager">
   <!--
-    Build the `defaultDebug` variant, install it on the selected device and launch it.
-    Installs as de.mm20.launcher2.debug, next to any other Kvaesitso install.
-    Make sure "defaultDebug" is selected for :app:app in Build > Select Build Variant.
+    Build, install on the selected device and launch.
+    Select the variant for :app:app in Build > Select Build Variant:
+      - defaultFork: optimized (smooth, like the official release). Use this normally.
+      - defaultDebug: unoptimized, for debugging. Noticeably laggier.
+    Both install as de.mm20.launcher2.debug (next to the official app) and share data.
     Xiaomi / HyperOS: enable Developer options > "Install via USB" and accept the prompt
     on the phone, otherwise the install fails with INSTALL_FAILED_USER_RESTRICTED.
   -->
-  <configuration default="false" name="Kvaesitso Debug" type="AndroidRunConfigurationType" factoryName="Android App" activateToolWindowBeforeRun="false">
+  <configuration default="false" name="Kvaesitso" type="AndroidRunConfigurationType" factoryName="Android App" activateToolWindowBeforeRun="false">
     <module name="Kvaesitso.app.app" />
     <option name="ANDROID_RUN_CONFIGURATION_SCHEMA_VERSION" value="1" />
     <option name="DEPLOY" value="true" />

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the debug variant, install it on the connected device and launch it.
+# Build the optimized "fork" variant (installs as de.mm20.launcher2.debug), install it on the connected device and launch it.
 # Usage: scripts/install-debug.sh [device-serial]
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -14,5 +14,5 @@ fi
 ADB="${ANDROID_HOME:-$HOME/Android/Sdk}/platform-tools/adb"
 [[ -n "${1:-}" ]] && export ANDROID_SERIAL="$1"
 
-./gradlew :app:app:installDefaultDebug
+./gradlew :app:app:installDefaultFork
 "$ADB" shell am start -n de.mm20.launcher2.debug/de.mm20.launcher2.ui.launcher.LauncherActivity

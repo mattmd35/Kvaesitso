@@ -1,5 +1,10 @@
 package de.mm20.launcher2.ui.launcher.search.apps.drawer
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -8,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -19,6 +25,8 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.lerp
+import androidx.compose.ui.unit.toSize
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
@@ -88,6 +96,32 @@ class DrawerDragState(
     var mergeTargetKey by mutableStateOf<String?>(null)
         private set
 
+    /**
+     * Scale and alpha of the floating copy of the dragged tile (lift and drop animations).
+     */
+    var draggedTileScale by mutableFloatStateOf(1f)
+        private set
+    var draggedTileAlpha by mutableFloatStateOf(1f)
+        private set
+
+    /**
+     * True while the dragged tile animates into its final position after it was released.
+     */
+    private var isSettling = false
+    private var liftJob: Job? = null
+
+    /**
+     * Last known grid index of each tile, used to animate tiles to their new position when the
+     * order changes.
+     */
+    internal val lastIndices = HashMap<String, Int>()
+
+    /**
+     * Size of a grid cell in px.
+     */
+    internal var cellSize = Size.Zero
+        private set
+
     private var pointerOffsetInTile = Offset.Zero
 
     private var hoverKey: String? = null
@@ -95,8 +129,9 @@ class DrawerDragState(
     private var scrollJob: Job? = null
     private var currentScrollDirection = 0
 
-    internal fun registerTile(key: String, owner: Any, bounds: Rect) {
+    internal fun registerTile(key: String, owner: Any, bounds: Rect, size: Size) {
         tiles[key] = Tile(owner, bounds)
+        cellSize = size
     }
 
     internal fun unregisterTile(key: String, owner: Any) {
@@ -114,34 +149,77 @@ class DrawerDragState(
      * @param position pointer position in local coordinates of the list
      */
     internal fun startDrag(position: Offset): Boolean {
+        if (isSettling) return false
         val windowPos = position + containerOffset
         val (key, bounds) = tileAt(windowPos) ?: return false
         if (!canDrag(key)) return false
         pointerOffsetInTile = windowPos - bounds.topLeft
         draggedTileSize = bounds.size
         draggedTilePosition = bounds.topLeft
+        draggedTileScale = 1f
+        draggedTileAlpha = 1f
         draggedKey = key
         onDragStarted(key)
+        liftJob = scope.launch {
+            animate(1f, LiftScale, animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) { v, _ ->
+                draggedTileScale = v
+            }
+        }
         return true
     }
 
     internal fun drag(position: Offset) {
-        if (draggedKey == null) return
+        if (draggedKey == null || isSettling) return
         draggedTilePosition = position + containerOffset - pointerOffsetInTile
         updateHover()
         updateScrolling(position.y)
     }
 
     internal fun endDrag() {
-        val dragged = draggedKey
+        val dragged = draggedKey ?: return
+        if (isSettling) return
         val target = mergeTargetKey
-        if (dragged != null && target != null) {
-            onMerge(dragged, target)
+        hoverJob?.cancel()
+        hoverJob = null
+        hoverKey = null
+        stopScrolling()
+        liftJob?.cancel()
+        isSettling = true
+
+        // Capture the destination before the layout changes
+        val targetBounds = target?.let { tiles[it]?.bounds }
+        if (target != null) onMerge(dragged, target)
+
+        scope.launch {
+            try {
+                val start = draggedTilePosition
+                val startScale = draggedTileScale
+                if (targetBounds != null) {
+                    // Shrink into the folder
+                    val end = targetBounds.center - Offset(draggedTileSize.width / 2f, draggedTileSize.height / 2f)
+                    animate(0f, 1f, animationSpec = tween(220, easing = FastOutSlowInEasing)) { f, _ ->
+                        draggedTilePosition = lerp(start, end, f)
+                        draggedTileScale = startScale + (0.4f - startScale) * f
+                        draggedTileAlpha = 1f - f
+                    }
+                } else {
+                    // Glide into the slot. It might not be visible anymore, then just drop it.
+                    val end = tiles[dragged]?.bounds?.topLeft ?: return@launch
+                    animate(0f, 1f, animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) { f, _ ->
+                        draggedTilePosition = lerp(start, end, f)
+                        draggedTileScale = startScale + (1f - startScale) * f
+                    }
+                }
+            } finally {
+                isSettling = false
+                reset()
+            }
         }
-        reset()
     }
 
     internal fun cancelDrag() {
+        if (isSettling) return
+        liftJob?.cancel()
         reset()
     }
 
@@ -152,6 +230,8 @@ class DrawerDragState(
         stopScrolling()
         mergeTargetKey = null
         draggedKey = null
+        draggedTileScale = 1f
+        draggedTileAlpha = 1f
     }
 
     private fun updateHover() {
@@ -238,7 +318,7 @@ fun Modifier.drawerDragTile(state: DrawerDragState?, key: String): Modifier {
             onDispose { state.unregisterTile(key, owner) }
         }
         onGloballyPositioned {
-            state.registerTile(key, owner, it.boundsInWindow())
+            state.registerTile(key, owner, it.boundsInWindow(), it.size.toSize())
         }
     }
 }
@@ -305,3 +385,5 @@ private suspend fun AwaitPointerEventScope.awaitReleaseOrSlop(
         if ((change.position - start).getDistance() > slop) return
     }
 }
+
+private const val LiftScale = 1.12f

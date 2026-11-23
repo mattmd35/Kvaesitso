@@ -10,6 +10,7 @@ import de.mm20.launcher2.appshortcuts.appShortcutsModule
 import de.mm20.launcher2.applock.appLockModule
 import de.mm20.launcher2.backup.backupModule
 import de.mm20.launcher2.badges.badgesModule
+import de.mm20.launcher2.wallpaper.wallpaperModule
 import de.mm20.launcher2.calculator.calculatorModule
 import de.mm20.launcher2.calendar.calendarModule
 import de.mm20.launcher2.contacts.contactsModule
@@ -102,6 +103,7 @@ class LauncherApplication : Application(), CoroutineScope, ImageLoaderFactory {
                     profilesModule,
                     i18nDataModule,
                     feedModule,
+                    wallpaperModule,
                 )
             )
         }

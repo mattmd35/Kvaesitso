@@ -9,7 +9,12 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -52,6 +57,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.first
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -233,7 +240,20 @@ fun FolderOverlay(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
+    // Animate out before actually closing the folder
+    val visibleState = remember { MutableTransitionState(false).apply { targetState = true } }
+    val close = { visibleState.targetState = false }
+    LaunchedEffect(visibleState) {
+        snapshotFlow { visibleState.isIdle && !visibleState.currentState }
+            .first { it }
+        dismiss()
+    }
+
     Overlay {
+        val scrimAlpha by animateFloatAsState(
+            if (visibleState.targetState) 0.32f else 0f,
+            label = "scrim",
+        )
         var renaming by remember { mutableStateOf(false) }
         var arranging by remember { mutableStateOf(false) }
         var name by remember { mutableStateOf(currentFolder.folder.name) }
@@ -245,17 +265,17 @@ fun FolderOverlay(
         }
 
         BackHandler {
-            if (renaming) commitName() else dismiss()
+            if (renaming) commitName() else close()
         }
 
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.32f))
+                .background(MaterialTheme.colorScheme.scrim.copy(alpha = scrimAlpha))
                 .pointerInput(Unit) {
                     detectTapGestures {
                         if (renaming) commitName()
-                        dismiss()
+                        close()
                     }
                 }
                 .systemBarsPadding()
@@ -263,8 +283,12 @@ fun FolderOverlay(
             contentAlignment = Alignment.Center,
         ) {
             AnimatedVisibility(
-                visibleState = remember { MutableTransitionState(false).apply { targetState = true } },
-                enter = fadeIn() + scaleIn(initialScale = 0.9f),
+                visibleState = visibleState,
+                enter = fadeIn(tween(180)) + scaleIn(
+                    initialScale = 0.85f,
+                    animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow),
+                ),
+                exit = fadeOut(tween(150)) + scaleOut(targetScale = 0.9f, animationSpec = tween(150)),
             ) {
                 LauncherCard(
                     modifier = Modifier

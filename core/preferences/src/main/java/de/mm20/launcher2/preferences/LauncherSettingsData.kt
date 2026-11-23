@@ -70,6 +70,11 @@ data class LauncherSettingsData internal constructor(
     val favoritesFrequentlyUsedRows: Int = 1,
     val favoritesEditButton: Boolean = true,
     val favoritesCompactTags: Boolean = false,
+    /**
+     * Show the favorites section above the app drawer. Favorites keep working elsewhere
+     * (dock, widgets) when this is off.
+     */
+    val favoritesInDrawer: Boolean = false,
 
     val searchAllApps: Boolean = true,
     val appsShowDetails: Boolean = true,

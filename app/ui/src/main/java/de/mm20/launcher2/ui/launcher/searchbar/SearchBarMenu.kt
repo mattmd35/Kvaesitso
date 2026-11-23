@@ -31,6 +31,9 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.viewmodel.compose.viewModel
+import de.mm20.launcher2.ui.launcher.search.apps.drawer.AppDrawerVM
+import de.mm20.launcher2.ui.launcher.sheets.LocalBottomSheetManager
 import de.mm20.launcher2.ui.R
 import de.mm20.launcher2.ui.settings.SettingsActivity
 
@@ -87,6 +90,38 @@ fun RowScope.SearchBarMenu(
                         Icon(painterResource(R.drawable.wallpaper_24px), contentDescription = null)
                     }
                 )
+                val sheetManager = LocalBottomSheetManager.current
+                DropdownMenuItem(
+                    shape = MenuDefaults.middleItemShape,
+                    onClick = {
+                        sheetManager.showEditFavoritesSheet()
+                        showOverflowMenu = false
+                    },
+                    text = {
+                        Text(stringResource(R.string.menu_item_edit_favs))
+                    },
+                    leadingIcon = {
+                        Icon(painterResource(R.drawable.edit_24px), contentDescription = null)
+                    }
+                )
+                val drawerVM: AppDrawerVM = viewModel()
+                val canRearrange by drawerVM.canEdit
+                val isRearranging by drawerVM.isEditing
+                if (canRearrange && !isRearranging) {
+                    DropdownMenuItem(
+                        shape = MenuDefaults.middleItemShape,
+                        onClick = {
+                            drawerVM.startEditing()
+                            showOverflowMenu = false
+                        },
+                        text = {
+                            Text(stringResource(R.string.app_drawer_rearrange))
+                        },
+                        leadingIcon = {
+                            Icon(painterResource(R.drawable.drag_indicator_24px), contentDescription = null)
+                        }
+                    )
+                }
                 DropdownMenuItem(
                     shape = MenuDefaults.middleItemShape,
                     onClick = {

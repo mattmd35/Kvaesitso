@@ -21,6 +21,13 @@ class FavoritesSettings internal constructor(
     )
 }.distinctUntilChanged()) {
 
+    val showInDrawer
+        get() = dataStore.data.map { it.favoritesInDrawer }.distinctUntilChanged()
+
+    fun setShowInDrawer(showInDrawer: Boolean) {
+        dataStore.update { it.copy(favoritesInDrawer = showInDrawer) }
+    }
+
     val showEditButton
         get() = dataStore.data.map { it.favoritesEditButton }.distinctUntilChanged()
 
